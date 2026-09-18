@@ -1,0 +1,16 @@
+# IDE & Editor
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs & Temp
+*.log
+error_log
+php_errors.log
+scratch/

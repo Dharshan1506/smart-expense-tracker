@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Expense Tracker - Academic DBMS Project Report & Technical Walkthrough</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1e40af;
+            --primary-dark: #1e3a8a;
+            --accent: #3b82f6;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --border: #e2e8f0;
+            --bg-light: #f8fafc;
+            --card-bg: #ffffff;
+            --success: #15803d;
+            --danger: #b91c1c;
+            --warning: #b45309;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: var(--text-main);
+            background: #ffffff;
+            line-height: 1.65;
+            font-size: 14px;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        /* Cover Page / Header */
+        .cover-header {
+            border-bottom: 3px solid var(--primary);
+            padding-bottom: 30px;
+            margin-bottom: 40px;
+        }
+        .project-badge {
+            display: inline-block;
+            background: #eff6ff;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 12px;
+            border-radius: 4px;
+            border: 1px solid #bfdbfe;
+            margin-bottom: 12px;
+        }
+        h1.doc-title {
+            font-size: 28px;
+            font-weight: 800;
+            color: #090d16;
+            line-height: 1.25;
+            margin-bottom: 10px;
+        }
+        .doc-subtitle {
+            font-size: 15px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            background: var(--bg-light);
+            border: 1px solid var(--border);
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .meta-item strong {
+            color: var(--text-main);
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+        }
+
+        /* Typography */
+        h2 {
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            margin: 35px 0 15px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 20px 0 10px;
+        }
+        p {
+            margin-bottom: 12px;
+            color: #334155;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 25px;
+            font-size: 12.5px;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border: 1px solid var(--border);
+            vertical-align: top;
+        }
+        th {
+            background: #f1f5f9;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        /* Cards & Code Blocks */
+        .callout {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            padding: 14px 18px;
+            border-radius: 4px;
+            margin: 18px 0;
+            font-size: 13px;
+        }
+        .callout-info {
+            background: #eff6ff;
+            border-left-color: var(--accent);
+        }
+        code, pre {
+            font-family: 'JetBrains Mono', Consolas, monospace;
+        }
+        code {
+            background: #f1f5f9;
+            color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11.5px;
+        }
+        pre {
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 14px;
+            border-radius: 6px;
+            font-size: 11.5px;
+            overflow-x: auto;
+            margin: 12px 0 18px;
+            line-height: 1.5;
+        }
+        pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .pill {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+        .pill-blue { background: #dbeafe; color: #1d4ed8; }
+        .pill-green { background: #dcfce7; color: #15803d; }
+        .pill-amber { background: #fef3c7; color: #b45309; }
+
+        /* Print Controls */
+        .no-print {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: #1e40af;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 700;
+            box-shadow: 0 10px 25px -5px rgba(30, 64, 175, 0.5);
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            z-index: 999;
+            transition: transform 0.2s ease;
+        }
+        .no-print:hover {
+            transform: scale(1.05);
+            background: #1e3a8a;
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; font-size: 11pt; }
+            .container { max-width: 100%; }
+            h2 { page-break-before: auto; page-break-after: avoid; }
+            tr, pre, .meta-grid { page-break-inside: avoid; }
+            a { text-decoration: none; color: inherit; }
+            @page {
+                margin: 1.8cm 1.5cm;
+                size: A4 portrait;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<button class="no-print" onclick="window.print()">
+    <i class="fa-solid fa-file-pdf"></i> Print / Save as PDF
+</button>
+
+<div class="container">
+
+    <!-- COVER / HEADER -->
+    <div class="cover-header">
+        <span class="project-badge"><i class="fa-solid fa-graduation-cap"></i> Academic College DBMS Project</span>
+        <h1 class="doc-title">Smart Expense Tracker</h1>
+        <div class="doc-subtitle">Relational Database Design, 3NF Normalization Proofs, Architecture & Technical Walkthrough</div>
+        
+        <div class="meta-grid">
+            <div class="meta-item">
+                <strong>Target Platform</strong>
+                Apache + MySQL (XAMPP for Windows)
+            </div>
+            <div class="meta-item">
+                <strong>Backend Engine</strong>
+                PHP 8 (Strict Types & Native PDO)
+            </div>
+            <div class="meta-item">
+                <strong>Database Architecture</strong>
+                MySQL 8.0+ (InnoDB, 3NF Normalized)
+            </div>
+            <div class="meta-item">
+                <strong>Client Interface</strong>
+                Modern Fintech UI • Chart.js 4.4
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. EXECUTIVE SUMMARY -->
+    <h2><i class="fa-solid fa-compass"></i> 1. Executive Summary</h2>
+    <p>
+        The <strong>Smart Expense Tracker</strong> is a full-stack personal finance application designed to combine <strong>academic DBMS rigor</strong> with a <strong>modern fintech user experience</strong>. 
+        It provides end-to-end income and expense management, periodic budget variance tracking, milestone savings goals, automated financial alerts, and an educational catalog demonstrating <strong>20 fundamental relational DBMS queries</strong>.
+    </p>
+    <p>
+        The backend is architected in <strong>pure PHP 8 and MySQL</strong> without introducing external runtime dependencies (such as Node.js or Python). Security is strictly enforced using <strong>100% prepared SQL statements</strong>, Bcrypt password hashing, session regeneration, and CSRF token protection.
+    </p>
+
+    <!-- 2. ARCHITECTURE & TOOL SELECTION -->
+    <h2><i class="fa-solid fa-layer-group"></i> 2. Technology Stack & Tool Justification</h2>
+    <p>Every tool and library in this project was selected for academic defensibility and zero-configuration local deployment:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Technology / Tool</th>
+                <th>Role in Application</th>
+                <th>Why We Specifically Chose It</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>PHP 8.0+</strong></td>
+                <td>Server-side business logic & HTML template compilation</td>
+                <td>Native execution on Apache, zero compilation step, cross-platform compatibility, and <code>declare(strict_types=1)</code> for strict type safety.</td>
+            </tr>
+            <tr>
+                <td><strong>MySQL 8 (InnoDB)</strong></td>
+                <td>Relational Database Management System (RDBMS)</td>
+                <td>ACID compliance, referential integrity via Foreign Keys (<code>ON DELETE CASCADE</code> / <code>RESTRICT</code>), B-Tree performance indexing, and virtual Relational Views.</td>
+            </tr>
+            <tr>
+                <td><strong>PHP Data Objects (PDO)</strong></td>
+                <td>Database connectivity abstraction layer</td>
+                <td>Configured with <code>PDO::ATTR_EMULATE_PREPARES => false</code>, ensuring MySQL compiles SQL statements natively and completely eliminates SQL Injection vulnerabilities.</td>
+            </tr>
+            <tr>
+                <td><strong>Bcrypt (PASSWORD_BCRYPT)</strong></td>
+                <td>Cryptographic password hashing</td>
+                <td>Industry-standard salted one-way hashing with an adaptive work factor that protects against brute-force and rainbow-table attacks (unlike MD5/SHA1).</td>
+            </tr>
+            <tr>
+                <td><strong>Chart.js 4.4</strong></td>
+                <td>Client-side financial data visualization</td>
+                <td>Lightweight canvas charting engine that renders responsive line charts, grouped cashflow bars, and category doughnut charts without Node.js dependencies.</td>
+            </tr>
+            <tr>
+                <td><strong>XAMPP Environment</strong></td>
+                <td>Local Apache + MySQL deployment stack</td>
+                <td>Standard evaluation environment in university DBMS laboratories. Bundles Apache and MySQL into an executable control panel for Windows.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 3. WORKFLOW & REQUEST LIFECYCLE -->
+    <h2><i class="fa-solid fa-diagram-project"></i> 3. System Workflow & Request Lifecycle</h2>
+    <p>When a user interacts with the application, the request flows through a 4-tier pipeline:</p>
+
+    <div class="callout callout-info">
+        <strong>The 4-Step Processing Cycle:</strong>
+        <ol style="margin-top: 8px; padding-left: 20px; line-height: 1.6;">
+            <li><strong>Client Dispatch:</strong> The browser issues an HTTP request (GET or POST) to Apache on port 80.</li>
+            <li><strong>Security & Session Gate:</strong> PHP loads <code>includes/auth.php</code>, initializes <code>session_start()</code>, verifies user authentication (<code>require_login()</code>), and checks CSRF tokens on write operations.</li>
+            <li><strong>Database Execution:</strong> The script connects to MySQL via <code>getDBConnection()</code> in <code>config/database.php</code> and executes prepared SQL queries with bound parameter arrays.</li>
+            <li><strong>Hydration & Client Render:</strong> PHP compiles financial metrics into the HTML DOM and serializes datasets into <code>window.DashboardData</code> for Chart.js interactive rendering.</li>
+        </ol>
+    </div>
+
+    <!-- 4. FILE BY FILE WALKTHROUGH -->
+    <h2><i class="fa-solid fa-file-code"></i> 4. Complete Walkthrough of All 25 PHP Files</h2>
+    <p>The codebase is organized into five logical modules:</p>
+
+    <h3>Module A: Core Configuration & Security Guards</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Execution Responsibility & Logic</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>config/database.php</code></td>
+                <td>Establishes a singleton PDO connection to MySQL. Enforces strict UTF-8 (<code>utf8mb4</code>), exception error modes, and displays a recovery troubleshooting UI if the MySQL service is offline.</td>
+            </tr>
+            <tr>
+                <td><code>includes/auth.php</code></td>
+                <td>The core security module. Provides <code>require_login()</code> session guards, CSRF token generation/verification, currency/date formatters, and the 5-rule <code>get_smart_insights()</code> engine.</td>
+            </tr>
+            <tr>
+                <td><code>includes/header.php</code></td>
+                <td>HTML document head template. Injects responsive viewports, Google Fonts (<em>Plus Jakarta Sans</em>), FontAwesome vector icons, and the global design system stylesheet.</td>
+            </tr>
+            <tr>
+                <td><code>includes/navbar.php</code></td>
+                <td>Sticky top navigation bar. Queries live account Net Balance in real time and provides the universal <code>+ Add Transaction</code> modal trigger.</td>
+            </tr>
+            <tr>
+                <td><code>includes/sidebar.php</code></td>
+                <td>Responsive navigation sidebar and mobile slide-out drawer with active route tracking and sign-out confirmation modal triggers.</td>
+            </tr>
+            <tr>
+                <td><code>includes/footer.php</code></td>
+                <td>Global application footer. Contains the universal <strong>Quick Add Transaction Modal</strong>, the custom <strong>Confirmation Dialog Modal</strong> (replacing browser <code>confirm()</code>), and loads Chart.js 4.4.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Module B: Entry, Authentication & Session Flow</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Execution Responsibility & Logic</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>index.php</code></td>
+                <td>Application entry point. Checks if the user is already authenticated (redirecting to dashboard) or serves the public presentation page.</td>
+            </tr>
+            <tr>
+                <td><code>login.php</code></td>
+                <td>Authenticates users. Validates credentials via <code>password_verify()</code>, regenerates session IDs against fixation attacks, and includes a 1-click Demo Account filler.</td>
+            </tr>
+            <tr>
+                <td><code>register.php</code></td>
+                <td>User account provisioning. Validates input bounds, verifies email uniqueness, hashes passwords via <code>PASSWORD_BCRYPT</code>, seeds a welcome alert, and establishes the user session.</td>
+            </tr>
+            <tr>
+                <td><code>logout.php</code></td>
+                <td>Clears <code>$_SESSION</code>, expires session cookies, destroys the session, and redirects to login with an informational notice.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Module C: Financial Ledger Operations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Execution Responsibility & Logic</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>dashboard.php</code></td>
+                <td>The central financial dashboard. Computes Top KPIs (Income, Expense, Balance, Savings), compiles 6-month trends for area and bar charts, doughnut category allocations, and renders budget threshold bars.</td>
+            </tr>
+            <tr>
+                <td><code>transactions.php</code></td>
+                <td>The complete financial ledger. Implements multi-criteria parameterized filtering (search keyword, category, type, date range, sort order) and pagination fallbacks.</td>
+            </tr>
+            <tr>
+                <td><code>add_transaction.php</code></td>
+                <td>Records new financial transactions. If an expense is entered, automatically evaluates whether it causes a budget overrun and inserts alert warnings into <code>alerts</code>.</td>
+            </tr>
+            <tr>
+                <td><code>edit_transaction.php</code></td>
+                <td>Updates existing ledger tuples. Enforces user ownership in the WHERE clause (<code>transaction_id = ? AND user_id = ?</code>) to eliminate IDOR security vulnerabilities.</td>
+            </tr>
+            <tr>
+                <td><code>delete_transaction.php</code></td>
+                <td>Safe record removal. Validates CSRF tokens and user ownership before executing a parameter-bound DELETE query.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Module D: Budgets, Categories, Savings & Reports</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Execution Responsibility & Logic</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>budgets.php</code></td>
+                <td>Establishes category budget thresholds. Runs a <code>LEFT JOIN</code> query to evaluate actual spent amounts against limits and displays color-coded progress bars (Green &lt;80%, Amber ≥80%, Red ≥100%).</td>
+            </tr>
+            <tr>
+                <td><code>categories.php</code></td>
+                <td>Manages income and expense classification categories. Calculates aggregate volume per category and manages user-custom categories.</td>
+            </tr>
+            <tr>
+                <td><code>savings.php</code></td>
+                <td>Manages milestone savings reserves. Computes target completion percentages and supports atomic fund deposits via SQL addition.</td>
+            </tr>
+            <tr>
+                <td><code>analytics.php</code></td>
+                <td>Deep spending analytics. Computes highest spending categories, 14-day daily velocity area charts, and uses SQL subqueries to compute average monthly expenditure.</td>
+            </tr>
+            <tr>
+                <td><code>reports.php</code></td>
+                <td>Multi-statement reporting generator (Monthly, Category, Income, Budget, Savings). Supports one-click CSV export and a print-optimized layout.</td>
+            </tr>
+            <tr>
+                <td><code>queries.php</code></td>
+                <td>Academic DBMS catalog. Houses and dynamically executes all 20 essential SQL queries with live output tables, copy buttons, and normalization documentation.</td>
+            </tr>
+            <tr>
+                <td><code>profile.php</code></td>
+                <td>Account administration. Displays live DBMS account telemetry and handles secure password changes with old-password verification.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Module E: Asynchronous REST APIs</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>File</th>
+                <th>Execution Responsibility & Logic</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>api/dashboard_data.php</code></td>
+                <td>Authenticated JSON endpoint returning live summary metrics (income, expenses, balance, monthly expense, category breakdowns).</td>
+            </tr>
+            <tr>
+                <td><code>api/analytics_data.php</code></td>
+                <td>Authenticated JSON endpoint returning 12-month aggregated time-series cashflow arrays for client graphs.</td>
+            </tr>
+            <tr>
+                <td><code>api/transaction_data.php</code></td>
+                <td>Authenticated JSON endpoint returning paginated transaction records bounded between 1 and 100 entries.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- 5. DATABASE SCHEMA & 3NF NORMALIZATION PROOFS -->
+    <h2><i class="fa-solid fa-database"></i> 5. Relational Database Normalization Proofs (3NF)</h2>
+    <p>
+        The database schema (<code>expense_tracker.sql</code>) consists of 6 tables and 3 relational views, designed in accordance with <strong>Third Normal Form (3NF)</strong>:
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Normal Form</th>
+                <th>DBMS Requirement</th>
+                <th>Implementation Proof in This Project</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>First Normal Form (1NF)</strong></td>
+                <td>Attributes must be atomic; no multi-valued attributes; explicit Primary Key defined.</td>
+                <td>All columns hold indivisible scalar data. Financial figures use <code>DECIMAL(10,2)</code> (not comma-separated strings). Each table defines an explicit surrogate primary key (e.g., <code>user_id INT AUTO_INCREMENT PRIMARY KEY</code>).</td>
+            </tr>
+            <tr>
+                <td><strong>Second Normal Form (2NF)</strong></td>
+                <td>Must satisfy 1NF; no partial dependencies (all non-key attributes fully dependent on candidate keys).</td>
+                <td>All relations use single-attribute surrogate primary keys. Non-key attributes (such as <code>amount</code> or <code>description</code>) depend entirely on the entire primary key, eliminating partial dependencies.</td>
+            </tr>
+            <tr>
+                <td><strong>Third Normal Form (3NF)</strong></td>
+                <td>Must satisfy 2NF; no transitive functional dependencies (non-key attributes must not depend on other non-key attributes).</td>
+                <td>In <code>transactions</code>, we store <code>category_id</code> (foreign key) but do not store <code>category_name</code> or <code>icon</code>. Category attributes are resolved via <code>JOIN</code> operations, eliminating update anomalies.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Relational Views</h3>
+    <ol style="margin-left: 20px; line-height: 1.8;">
+        <li><code>v_monthly_financial_summary</code>: Aggregates total income, expense, and net savings per user per month.</li>
+        <li><code>v_budget_status</code>: Dynamically computes budget utilization percentage and status (<code>ON_TRACK</code>, <code>WARNING</code>, <code>EXCEEDED</code>).</li>
+        <li><code>v_category_spending</code>: Computes category-wise counts, sums, averages, and extremes.</li>
+    </ol>
+
+    <!-- 6. 20 SQL QUERIES CATALOG -->
+    <h2><i class="fa-solid fa-list-check"></i> 6. Catalog of 20 Essential Relational SQL Queries</h2>
+    <p>The application demonstrates all 20 required DBMS operations in <code>queries.php</code>:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Relational DBMS Concept</th>
+                <th>Application Usage in Project</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td>1</td><td>Basic SELECT (Projection)</td><td>Profile attribute retrieval in <code>profile.php</code></td></tr>
+            <tr><td>2</td><td>INSERT (DML)</td><td>Financial transaction entry in <code>add_transaction.php</code></td></tr>
+            <tr><td>3</td><td>UPDATE (Mutation)</td><td>Record modification with user ID check in <code>edit_transaction.php</code></td></tr>
+            <tr><td>4</td><td>DELETE (Referential Removal)</td><td>Safe record removal in <code>delete_transaction.php</code></td></tr>
+            <tr><td>5</td><td>WHERE Clause (Selection)</td><td>30-day date boundary filtering in <code>transactions.php</code></td></tr>
+            <tr><td>6</td><td>ORDER BY (Sorting)</td><td>Multi-attribute sorting (amount DESC, date DESC)</td></tr>
+            <tr><td>7</td><td>GROUP BY (Aggregation)</td><td>Cashflow aggregation grouped by transaction type</td></tr>
+            <tr><td>8</td><td>HAVING Clause (Group Filter)</td><td>Filtering high-volume categories where total spent &gt; ₹100</td></tr>
+            <tr><td>9</td><td>SUM Function</td><td>Lifetime income and expense summation in <code>dashboard.php</code></td></tr>
+            <tr><td>10</td><td>AVG Function</td><td>Calculating average expenditure per transaction</td></tr>
+            <tr><td>11</td><td>COUNT Function</td><td>Category transaction frequency counting</td></tr>
+            <tr><td>12</td><td>MAX Function</td><td>Finding the single highest expenditure logged</td></tr>
+            <tr><td>13</td><td>MIN Function</td><td>Finding the lowest expenditure logged</td></tr>
+            <tr><td>14</td><td>INNER JOIN</td><td>Joining transactions with categories for badge colors and icons</td></tr>
+            <tr><td>15</td><td>LEFT JOIN</td><td>Category portfolio share calculation including unspent categories</td></tr>
+            <tr><td>16</td><td>Multiple-Table JOIN</td><td>Simultaneously joining transactions, users, and categories</td></tr>
+            <tr><td>17</td><td>Subquery (Correlated/Nested)</td><td>Finding transactions exceeding the user's historical average</td></tr>
+            <tr><td>18</td><td>Monthly Expense Analysis</td><td>Year-Month trajectory analysis via <code>DATE_FORMAT()</code></td></tr>
+            <tr><td>19</td><td>Category Allocation Breakdown</td><td>Computing category percentage share of total spending</td></tr>
+            <tr><td>20</td><td>Budget Exceeded Analysis</td><td>Calculating budget overruns and utilization percentages</td></tr>
+        </tbody>
+    </table>
+
+    <!-- 7. VIVA DEFENSE QUESTIONS -->
+    <h2><i class="fa-solid fa-circle-question"></i> 7. Viva Voce Defense Quick Reference</h2>
+    
+    <div class="callout callout-info" style="margin-bottom: 12px;">
+        <strong>Q1: Why is DECIMAL(10,2) used instead of FLOAT or DOUBLE?</strong><br>
+        <em>Answer:</em> Floating-point numbers use binary approximations which produce inexact rounding errors (e.g. <code>0.1 + 0.2 = 0.30000000000000004</code>). In financial systems, every cent must balance perfectly, so MySQL's fixed-point <code>DECIMAL(10,2)</code> data type is strictly required.
+    </div>
+
+    <div class="callout callout-info" style="margin-bottom: 12px;">
+        <strong>Q2: How does your application prevent SQL Injection?</strong><br>
+        <em>Answer:</em> We use PHP Data Objects (PDO) with native prepared statements (<code>PDO::ATTR_EMULATE_PREPARES => false</code>). User data is never concatenated into SQL strings; it is transmitted to the database engine separately through parameter placeholders (<code>?</code>), making SQL injection impossible.
+    </div>
+
+    <div class="callout callout-info" style="margin-bottom: 12px;">
+        <strong>Q3: How do you enforce referential integrity?</strong><br>
+        <em>Answer:</em> We use the InnoDB engine with foreign key constraints. When a user is deleted, <code>ON DELETE CASCADE</code> cleans up related transactions and budgets. For categories with recorded transactions, <code>ON DELETE RESTRICT</code> prevents orphaned records and preserves historical audit trails.
+    </div>
+
+    <div class="callout callout-info">
+        <strong>Q4: Why use views instead of repeated complex queries?</strong><br>
+        <em>Answer:</em> Views (like <code>v_budget_status</code>) encapsulate complex multi-table joins and calculations into virtual tables. This promotes code reusability, modularity, and allows the MySQL query optimizer to optimize execution plans.
+    </div>
+
+</div>
+
+</body>
+</html>
