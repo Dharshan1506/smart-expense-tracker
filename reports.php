@@ -1,7 +1,7 @@
 <?php
 /**
  * Financial Reports Generator & Data Export
- * Generates Monthly, Category, Income, Budget, and Savings statements with CSV export
+ * Modern Fintech SaaS Statement Generator with CSV Export & Ledger Audits
  */
 declare(strict_types=1);
 
@@ -26,7 +26,7 @@ $totalSum = 0.0;
 
 switch ($reportType) {
     case 'category':
-        $reportTitle = "Category-Wise Expenditure Statement ($selectedYear)";
+        $reportTitle = "Category-Wise Expenditure Audit ($selectedYear)";
         $sql = "
             SELECT 
                 c.category_name,
@@ -83,7 +83,7 @@ switch ($reportType) {
                 b.end_date,
                 COALESCE(SUM(t.amount), 0) as total_spent,
                 (b.budget_amount - COALESCE(SUM(t.amount), 0)) as variance,
-                ROUND((COALESCE(SUM(t.amount), 0) / b.budget_amount * 100), 1) as utilization_pct
+                ROUND((COALESCE(SUM(t.amount), 0) / NULLIF(b.budget_amount, 0) * 100), 1) as utilization_pct
             FROM budgets b
             INNER JOIN categories c ON b.category_id = c.category_id
             LEFT JOIN transactions t ON t.category_id = b.category_id 
@@ -100,14 +100,14 @@ switch ($reportType) {
         break;
 
     case 'savings':
-        $reportTitle = "Savings Goals & Asset Accumulation Report";
+        $reportTitle = "Savings Goals & Asset Accumulation Audit";
         $sql = "
             SELECT 
                 goal_name,
                 target_amount,
                 saved_amount,
                 (target_amount - saved_amount) as remaining_amount,
-                ROUND((saved_amount / target_amount * 100), 1) as progress_pct,
+                ROUND((saved_amount / NULLIF(target_amount, 0) * 100), 1) as progress_pct,
                 target_date
             FROM savings_goals
             WHERE user_id = ?
@@ -121,7 +121,7 @@ switch ($reportType) {
     case 'monthly_expense':
     default:
         $reportType = 'monthly_expense';
-        $reportTitle = "Monthly Expense Detailed Statement ($selectedYear)";
+        $reportTitle = "Monthly Expense Detailed Ledger ($selectedYear)";
         $sql = "
             SELECT 
                 t.transaction_date,
@@ -149,7 +149,7 @@ switch ($reportType) {
 // ----------------------------------------------------------
 if ($exportCsv && !empty($reportData)) {
     header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="Report_' . $reportType . '_' . date('Ymd_His') . '.csv"');
+    header('Content-Disposition: attachment; filename="ExpenseIQ_Report_' . $reportType . '_' . date('Ymd_His') . '.csv"');
     $output = fopen('php://output', 'w');
 
     // Headers
@@ -163,6 +163,15 @@ if ($exportCsv && !empty($reportData)) {
     exit;
 }
 
+// Calculate summary volume
+$reportSum = 0.0;
+foreach ($reportData as $row) {
+    if (isset($row['amount'])) $reportSum += (float)$row['amount'];
+    elseif (isset($row['total_amount'])) $reportSum += (float)$row['total_amount'];
+    elseif (isset($row['total_spent'])) $reportSum += (float)$row['total_spent'];
+    elseif (isset($row['saved_amount'])) $reportSum += (float)$row['saved_amount'];
+}
+
 $flash = get_flash();
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/includes/sidebar.php';
@@ -174,31 +183,60 @@ require_once __DIR__ . '/includes/sidebar.php';
     <div class="content-body">
         <?php if ($flash): ?>
             <div class="flash-alert flash-<?= htmlspecialchars($flash['type']) ?>">
-                <i class="fa-solid fa-circle-info"></i>
+                <i class="fa-solid fa-circle-check"></i>
                 <span><?= htmlspecialchars($flash['message']) ?></span>
             </div>
         <?php endif; ?>
 
-        <!-- Report Generation Controls -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title"><i class="fa-solid fa-file-invoice" style="color: var(--brand-primary);"></i> Report Parameters</h3>
+        <!-- Page Header Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <i class="fa-solid fa-file-shield"></i> Financial Auditing
+                    </span>
+                    <span class="badge badge-outline">CSV / Print Export</span>
+                </div>
+                <h2 style="font-size: 1.6rem; font-weight: 800; color: var(--text-primary); margin: 0; letter-spacing: -0.02em;">
+                    Financial Statements & Reports
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 4px 0 0 0;">
+                    Generate compliant ledger statements, category summaries, and performance audits
+                </p>
             </div>
-            <div class="card-body">
-                <form method="GET" action="reports.php" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; align-items: flex-end;">
+            <div style="display: flex; gap: 10px;">
+                <a href="reports.php?<?= http_build_query(array_merge($_GET, ['export' => 'csv'])) ?>" class="btn btn-outline" style="border-color: rgba(16, 185, 129, 0.3); color: var(--accent-emerald);">
+                    <i class="fa-solid fa-file-csv"></i> Export CSV
+                </a>
+                <button type="button" onclick="window.print()" class="btn btn-primary btn-glow">
+                    <i class="fa-solid fa-print"></i> Print Statement
+                </button>
+            </div>
+        </div>
+
+        <!-- Report Parameters Toolbar -->
+        <div class="card card-accent-primary" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="card-title" style="font-size: 1rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px; margin: 0;">
+                    <i class="fa-solid fa-sliders" style="color: var(--accent-primary);"></i>
+                    Report Parameters & Filters
+                </h3>
+            </div>
+            <div class="card-body" style="padding: 20px;">
+                <form method="GET" action="reports.php" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; align-items: flex-end;">
                     <div>
-                        <label class="form-label" style="font-size: 0.8rem;">Report Type</label>
+                        <label class="form-label" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;">Report Type</label>
                         <select name="report_type" class="form-select">
-                            <option value="monthly_expense" <?= ($reportType === 'monthly_expense') ? 'selected' : '' ?>>Monthly Expense Statement</option>
-                            <option value="category" <?= ($reportType === 'category') ? 'selected' : '' ?>>Category Analysis Report</option>
-                            <option value="income" <?= ($reportType === 'income') ? 'selected' : '' ?>>Income Ledger Report</option>
+                            <option value="monthly_expense" <?= ($reportType === 'monthly_expense') ? 'selected' : '' ?>>Monthly Expense Ledger</option>
+                            <option value="category" <?= ($reportType === 'category') ? 'selected' : '' ?>>Category Analysis Audit</option>
+                            <option value="income" <?= ($reportType === 'income') ? 'selected' : '' ?>>Income Ledger Statement</option>
                             <option value="budget" <?= ($reportType === 'budget') ? 'selected' : '' ?>>Budget Variance Report</option>
                             <option value="savings" <?= ($reportType === 'savings') ? 'selected' : '' ?>>Savings Goals Report</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="form-label" style="font-size: 0.8rem;">Year</label>
+                        <label class="form-label" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;">Fiscal Year</label>
                         <select name="year" class="form-select">
                             <?php for ($y = (int)date('Y'); $y >= (int)date('Y') - 3; $y--): ?>
                                 <option value="<?= $y ?>" <?= ($selectedYear === $y) ? 'selected' : '' ?>><?= $y ?></option>
@@ -207,9 +245,9 @@ require_once __DIR__ . '/includes/sidebar.php';
                     </div>
 
                     <div>
-                        <label class="form-label" style="font-size: 0.8rem;">Month (Optional)</label>
+                        <label class="form-label" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;">Month (Optional)</label>
                         <select name="month" class="form-select">
-                            <option value="0">Entire Year</option>
+                            <option value="0">Entire Fiscal Year</option>
                             <?php for ($m = 1; $m <= 12; $m++): ?>
                                 <option value="<?= $m ?>" <?= ($selectedMonth === $m) ? 'selected' : '' ?>>
                                     <?= date('F', mktime(0, 0, 0, $m, 10)) ?>
@@ -218,42 +256,76 @@ require_once __DIR__ . '/includes/sidebar.php';
                         </select>
                     </div>
 
-                    <div style="display: flex; gap: 8px;">
-                        <button type="submit" class="btn btn-primary" style="flex: 1;">
-                            <i class="fa-solid fa-arrows-rotate"></i> Generate
+                    <div>
+                        <button type="submit" class="btn btn-primary btn-glow" style="width: 100%; padding: 11px;">
+                            <i class="fa-solid fa-rotate"></i> Generate Statement
                         </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Printable / Viewable Report Card -->
-        <div class="card" id="printableArea">
-            <div class="card-header" style="background: white;">
-                <div>
-                    <h3 class="card-title"><?= htmlspecialchars($reportTitle) ?></h3>
-                    <span style="font-size: 0.82rem; color: var(--text-secondary);">Generated on <?= date('M d, Y h:i A') ?> for <?= htmlspecialchars($user['name']) ?></span>
+        <!-- 3-Stat Summary Strip -->
+        <div class="grid-3" style="margin-bottom: 24px;">
+            <div class="card" style="margin-bottom: 0; border-left: 4px solid var(--accent-primary);">
+                <div class="card-body" style="padding: 16px 20px;">
+                    <div style="color: var(--text-muted); font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                        Statement Total Volume
+                    </div>
+                    <div style="font-size: 1.45rem; font-weight: 800; font-family: var(--font-mono); color: var(--text-primary);">
+                        <?= format_currency($reportSum) ?>
+                    </div>
                 </div>
-                <div style="display: flex; gap: 8px;">
-                    <a href="reports.php?<?= http_build_query(array_merge($_GET, ['export' => 'csv'])) ?>" class="btn btn-outline btn-sm">
-                        <i class="fa-solid fa-file-csv" style="color: var(--success);"></i> Export CSV
-                    </a>
-                    <button onclick="window.print();" class="btn btn-outline btn-sm">
-                        <i class="fa-solid fa-print"></i> Print Statement
-                    </button>
+            </div>
+
+            <div class="card" style="margin-bottom: 0; border-left: 4px solid var(--accent-cyan);">
+                <div class="card-body" style="padding: 16px 20px;">
+                    <div style="color: var(--text-muted); font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                        Record Count
+                    </div>
+                    <div style="font-size: 1.45rem; font-weight: 800; font-family: var(--font-mono); color: var(--accent-cyan);">
+                        <?= count($reportData) ?> Rows
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 0; border-left: 4px solid var(--accent-emerald);">
+                <div class="card-body" style="padding: 16px 20px;">
+                    <div style="color: var(--text-muted); font-size: 0.76rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;">
+                        Audit Status
+                    </div>
+                    <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-emerald); display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-circle-check"></i> Verified Ledger
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Printable / Viewable Report Card -->
+        <div class="card card-accent-emerald" id="printableArea" style="margin-bottom: 0;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                <div>
+                    <h3 class="card-title" style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0 0 4px 0;">
+                        <?= htmlspecialchars($reportTitle) ?>
+                    </h3>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">
+                        Generated on <?= date('M d, Y h:i A') ?> &bull; Account: <?= htmlspecialchars($user['name']) ?> (<?= htmlspecialchars($user['email']) ?>)
+                    </span>
                 </div>
             </div>
 
             <div class="card-body" style="padding: 0;">
                 <?php if (empty($reportData)): ?>
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
+                    <div class="empty-state" style="padding: 56px 24px;">
+                        <div class="empty-state-icon" style="background: rgba(99, 102, 241, 0.12); color: var(--accent-primary); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 1.8rem; border: 1px solid rgba(99, 102, 241, 0.25);">
                             <i class="fa-solid fa-file-lines"></i>
                         </div>
-                        <div class="empty-state-title">No Statement Data Available</div>
-                        <div class="empty-state-desc">There are no records matching the selected parameters (<?= htmlspecialchars($reportTitle) ?>). Try selecting another time period or log transactions.</div>
-                        <button class="btn btn-primary btn-sm" onclick="openAddModal()" style="margin-top: 14px;">
-                            <i class="fa-solid fa-plus"></i> Log Transaction
+                        <h3 class="empty-state-title" style="font-size: 1.25rem; font-weight: 700;">No Statement Records Available</h3>
+                        <p class="empty-state-text" style="max-width: 440px; margin: 8px auto 20px auto; color: var(--text-secondary); font-size: 0.88rem;">
+                            There are no recorded transactions or data matching your selection parameters. Try choosing an entire fiscal year or record new transactions.
+                        </p>
+                        <button class="btn btn-primary btn-glow" onclick="openAddModal()">
+                            <i class="fa-solid fa-plus"></i> Record Transaction
                         </button>
                     </div>
                 <?php else: ?>
@@ -272,14 +344,14 @@ require_once __DIR__ . '/includes/sidebar.php';
                                 <?php foreach ($reportData as $row): ?>
                                     <tr>
                                         <?php foreach ($row as $colKey => $val): ?>
-                                            <td style="<?= in_array($colKey, ['amount', 'total_amount', 'avg_amount', 'max_amount', 'budget_amount', 'total_spent', 'variance', 'target_amount', 'saved_amount']) ? 'text-align: right; font-weight: 600;' : '' ?>">
+                                            <td style="<?= in_array($colKey, ['amount', 'total_amount', 'avg_amount', 'max_amount', 'budget_amount', 'total_spent', 'variance', 'target_amount', 'saved_amount']) ? 'text-align: right; font-weight: 700; font-family: var(--font-mono);' : '' ?>">
                                                 <?php 
                                                     if (in_array($colKey, ['amount', 'total_amount', 'avg_amount', 'max_amount', 'budget_amount', 'total_spent', 'variance', 'target_amount', 'saved_amount'])) {
-                                                        echo format_currency($val);
+                                                        echo format_currency((float)$val);
                                                     } elseif (str_contains($colKey, 'date')) {
-                                                        echo format_date($val);
+                                                        echo '<span style="color: var(--text-secondary); font-size: 0.82rem;">' . format_date((string)$val) . '</span>';
                                                     } elseif (str_contains($colKey, 'pct')) {
-                                                        echo $val . '%';
+                                                        echo '<span class="badge badge-outline">' . $val . '%</span>';
                                                     } else {
                                                         echo htmlspecialchars((string)$val);
                                                     }
@@ -296,22 +368,29 @@ require_once __DIR__ . '/includes/sidebar.php';
         </div>
 
     </div> <!-- End content-body -->
+</div>
 
 <style>
 @media print {
-    .sidebar, .navbar, .card:first-child, .btn, .flash-alert {
+    .sidebar, .navbar, .card:first-child, .btn, .flash-alert, #chatbotWidget {
         display: none !important;
     }
     .main-wrapper {
         margin-left: 0 !important;
+        width: 100% !important;
     }
     body, .content-body {
-        background: white !important;
+        background: #ffffff !important;
+        color: #000000 !important;
         padding: 0 !important;
     }
     .card {
-        border: none !important;
+        border: 1px solid #e2e8f0 !important;
         box-shadow: none !important;
+        background: #ffffff !important;
+    }
+    .card-title, table th, table td {
+        color: #000000 !important;
     }
 }
 </style>

@@ -1,7 +1,7 @@
 <?php
 /**
- * Top Navigation Bar Component
- * Responsive Fintech Navbar with Net Balance pill and Quick Modal Trigger
+ * Top Navigation Bar Component - ExpenseIQ Modern Fintech SaaS
+ * Responsive Navbar with Search, Notifications, Net Balance, and Quick Modal Action
  */
 declare(strict_types=1);
 
@@ -30,24 +30,41 @@ if ($user && isset($pdo)) {
         <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle Navigation Sidebar">
             <i class="fa-solid fa-bars"></i>
         </button>
-        <h1 class="page-title"><?= htmlspecialchars($pageTitle ?? 'Dashboard') ?></h1>
+        <h1 class="page-title">
+            <?= htmlspecialchars($pageTitle ?? 'Dashboard') ?>
+        </h1>
     </div>
 
     <div class="navbar-right">
         <?php if ($user): ?>
+            <!-- Global Quick Search -->
+            <div class="navbar-search">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" placeholder="Search transactions, budgets..." onkeydown="if(event.key === 'Enter'){ window.location.href = 'transactions.php?search=' + encodeURIComponent(this.value); }">
+            </div>
+
+            <!-- Net Balance Pill -->
             <div class="navbar-balance-pill" title="Total Available Net Liquidity">
                 <i class="fa-solid fa-wallet"></i>
                 <span>Net:</span>
                 <span class="navbar-balance-amount"><?= format_currency($quickBalance) ?></span>
             </div>
 
-            <button type="button" class="btn btn-primary btn-sm" onclick="openAddTransactionModal()">
+            <!-- Quick Add Transaction Button -->
+            <button type="button" class="btn btn-primary btn-sm" onclick="openAddTransactionModal()" style="font-weight: 700;">
                 <i class="fa-solid fa-plus"></i>
-                <span>Add Transaction</span>
+                <span>Quick Add</span>
             </button>
 
-            <a href="profile.php" class="btn btn-outline btn-sm btn-icon" title="Account Settings">
-                <i class="fa-solid fa-user"></i>
+            <!-- Notification Bell -->
+            <a href="budgets.php" class="navbar-action-btn" title="Alerts & Threshold Notifications">
+                <i class="fa-regular fa-bell"></i>
+                <span class="navbar-notif-dot"></span>
+            </a>
+
+            <!-- Profile Settings Link -->
+            <a href="profile.php" class="navbar-action-btn" title="Profile & Account Settings">
+                <i class="fa-regular fa-user"></i>
             </a>
         <?php else: ?>
             <a href="login.php" class="btn btn-outline btn-sm">Sign In</a>

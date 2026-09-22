@@ -1,7 +1,7 @@
 <?php
 /**
- * Add New Transaction Page
- * Securely records income and expense transactions using prepared statements
+ * Add New Transaction Form - ExpenseIQ Fintech SaaS
+ * Full form for creating and categorizing transactions with real-time budget verification
  */
 declare(strict_types=1);
 
@@ -12,17 +12,20 @@ $user = current_user();
 $userId = $user['id'];
 $pdo = getDBConnection();
 
-$pageTitle = 'Add Transaction';
+$pageTitle = 'Record Transaction';
 $currentPage = 'add_transaction';
 
 $errors = [];
-$type = $_GET['type'] ?? 'expense';
 $amount = '';
+$type = $_GET['type'] ?? 'expense';
+if (!in_array($type, ['income', 'expense'])) {
+    $type = 'expense';
+}
 $categoryId = '';
-$description = '';
 $transactionDate = date('Y-m-d');
+$description = '';
 
-// Fetch available categories
+// Fetch all available categories for the user
 $stmtCats = $pdo->prepare("
     SELECT category_id, category_name, category_type, icon, color 
     FROM categories 
@@ -33,59 +36,83 @@ $stmtCats->execute([$userId]);
 $allCategories = $stmtCats->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $type = trim($_POST['transaction_type'] ?? 'expense');
-    $amountInput = trim($_POST['amount'] ?? '');
-    $categoryId = (int)($_POST['category_id'] ?? 0);
-    $description = trim($_POST['description'] ?? '');
+    $csrfToken       = $_POST['csrf_token'] ?? '';
+    $amount          = trim($_POST['amount'] ?? '');
+    $type            = trim($_POST['transaction_type'] ?? 'expense');
+    $categoryId      = (int)($_POST['category_id'] ?? 0);
     $transactionDate = trim($_POST['transaction_date'] ?? date('Y-m-d'));
-    $csrfToken = $_POST['csrf_token'] ?? '';
+    $description     = trim($_POST['description'] ?? '');
 
+    // CSRF Check
     if (!verify_csrf_token($csrfToken)) {
-        $errors[] = 'Invalid security token. Please try again.';
+        $errors[] = 'Security token validation failed. Please submit the form again.';
+    }
+
+    // Input Validation
+    if (!is_numeric($amount) || (float)$amount <= 0) {
+        $errors[] = 'Please enter a valid monetary amount greater than zero.';
     }
 
     if (!in_array($type, ['income', 'expense'])) {
-        $errors[] = 'Invalid transaction type.';
+        $errors[] = 'Invalid transaction classification specified.';
     }
 
-    if (!is_numeric($amountInput) || (float)$amountInput <= 0) {
-        $errors[] = 'Please enter a valid positive numerical amount.';
-    } else {
-        $amount = round((float)$amountInput, 2);
-    }
-
-    if (empty($categoryId)) {
+    if ($categoryId <= 0) {
         $errors[] = 'Please select a valid category.';
+    } else {
+        // Verify category belongs to user or is global
+        $stmtCheckCat = $pdo->prepare("SELECT category_id, category_type FROM categories WHERE category_id = ? AND (user_id IS NULL OR user_id = ?)");
+        $stmtCheckCat->execute([$categoryId, $userId]);
+        $catRow = $stmtCheckCat->fetch();
+        if (!$catRow) {
+            $errors[] = 'Selected category does not exist or you do not have permission to access it.';
+        } elseif ($catRow['category_type'] !== $type) {
+            $errors[] = 'Selected category type does not match the transaction classification (' . ucfirst($type) . ').';
+        }
+    }
+
+    if (empty($transactionDate) || !strtotime($transactionDate)) {
+        $errors[] = 'Please enter a valid transaction date.';
     }
 
     if (empty($description)) {
-        $errors[] = 'Please provide a short description for this transaction.';
+        $errors[] = 'Please provide a brief description or note for this transaction.';
+    } elseif (strlen($description) > 255) {
+        $errors[] = 'Description must not exceed 255 characters.';
     }
 
-    if (empty($transactionDate)) {
-        $errors[] = 'Please provide a valid date.';
-    }
-
+    // Database Insertion
     if (empty($errors)) {
         try {
-            $stmt = $pdo->prepare("
-                INSERT INTO transactions (user_id, category_id, amount, transaction_type, description, transaction_date, created_at)
+            $amountVal = (float)$amount;
+            $stmtInsert = $pdo->prepare("
+                INSERT INTO transactions (user_id, category_id, amount, transaction_type, transaction_date, description, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, NOW())
             ");
-            $stmt->execute([$userId, $categoryId, $amount, $type, $description, $transactionDate]);
+            $stmtInsert->execute([
+                $userId,
+                $categoryId,
+                $amountVal,
+                $type,
+                $transactionDate,
+                $description
+            ]);
 
-            // If an expense is added, check if it pushes an active budget over the limit
+            // Budget Threshold Alert Check
             if ($type === 'expense') {
-                $checkBudget = $pdo->prepare("
-                    SELECT b.budget_amount, c.category_name, COALESCE(SUM(t.amount), 0) AS total_spent
+                $checkBudgetStmt = $pdo->prepare("
+                    SELECT b.budget_amount, c.category_name, SUM(t.amount) as total_spent
                     FROM budgets b
                     INNER JOIN categories c ON b.category_id = c.category_id
-                    LEFT JOIN transactions t ON t.category_id = b.category_id AND t.user_id = b.user_id AND t.transaction_type = 'expense'
-                    WHERE b.user_id = ? AND b.category_id = ? AND ? BETWEEN b.start_date AND b.end_date
+                    INNER JOIN transactions t ON t.category_id = b.category_id AND t.user_id = b.user_id
+                    WHERE b.user_id = ? AND b.category_id = ?
+                      AND ? BETWEEN b.start_date AND b.end_date
+                      AND t.transaction_type = 'expense'
+                      AND t.transaction_date BETWEEN b.start_date AND b.end_date
                     GROUP BY b.budget_id, b.budget_amount, c.category_name
                 ");
-                $checkBudget->execute([$userId, $categoryId, $transactionDate]);
-                $budgetRow = $checkBudget->fetch();
+                $checkBudgetStmt->execute([$userId, $categoryId, $transactionDate]);
+                $budgetRow = $checkBudgetStmt->fetch();
 
                 if ($budgetRow && (float)$budgetRow['total_spent'] > (float)$budgetRow['budget_amount']) {
                     $excess = (float)$budgetRow['total_spent'] - (float)$budgetRow['budget_amount'];
@@ -100,7 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            set_flash('success', 'Transaction of ' . format_currency($amount) . ' added successfully!');
+            set_flash('success', 'Transaction of ' . format_currency($amountVal) . ' recorded successfully!');
             header('Location: transactions.php');
             exit;
         } catch (Exception $e) {
@@ -119,8 +146,11 @@ require_once __DIR__ . '/includes/sidebar.php';
     <div class="content-body">
         <div style="max-width: 680px; margin: 0 auto;">
             
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <h2>Record New Transaction</h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                <div>
+                    <h2 style="font-size: 1.45rem; font-weight: 800; color: #ffffff; margin: 0 0 4px 0;">Record New Transaction</h2>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">Enter monetary outflow or inflow with category allocation</p>
+                </div>
                 <a href="transactions.php" class="btn btn-outline btn-sm">
                     <i class="fa-solid fa-arrow-left"></i> Back to Ledger
                 </a>
@@ -144,18 +174,18 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                         <!-- Type Selector Buttons -->
                         <div class="form-group">
-                            <label class="form-label">Transaction Type</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <label class="form-label">Transaction Classification</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                                 <label style="cursor: pointer;">
                                     <input type="radio" name="transaction_type" value="expense" <?= ($type === 'expense') ? 'checked' : '' ?> style="display: none;" id="radioExpense">
-                                    <div id="btnTypeExpense" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid <?= ($type === 'expense') ? '#ef4444' : '#e2e8f0' ?>; background: <?= ($type === 'expense') ? '#fee2e2' : '#ffffff' ?>; font-weight: 700; color: <?= ($type === 'expense') ? '#b91c1c' : '#64748b' ?>;">
-                                        <i class="fa-solid fa-arrow-trend-down"></i> Expense
+                                    <div id="btnTypeExpense" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.15); font-weight: 700; color: #fb7185; transition: var(--transition);">
+                                        <i class="fa-solid fa-arrow-trend-down"></i> Expense (Debit)
                                     </div>
                                 </label>
                                 <label style="cursor: pointer;">
                                     <input type="radio" name="transaction_type" value="income" <?= ($type === 'income') ? 'checked' : '' ?> style="display: none;" id="radioIncome">
-                                    <div id="btnTypeIncome" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid <?= ($type === 'income') ? '#10b981' : '#e2e8f0' ?>; background: <?= ($type === 'income') ? '#d1fae5' : '#ffffff' ?>; font-weight: 700; color: <?= ($type === 'income') ? '#065f46' : '#64748b' ?>;">
-                                        <i class="fa-solid fa-arrow-trend-up"></i> Income
+                                    <div id="btnTypeIncome" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid rgba(255, 255, 255, 0.1); background: rgba(20, 31, 54, 0.6); font-weight: 700; color: #94a3b8; transition: var(--transition);">
+                                        <i class="fa-solid fa-arrow-trend-up"></i> Income (Credit)
                                     </div>
                                 </label>
                             </div>
@@ -163,21 +193,21 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                         <!-- Amount Input -->
                         <div class="form-group">
-                            <label class="form-label" for="amount">Amount (₹)</label>
-                            <div style="position: relative;">
-                                <span style="position: absolute; left: 14px; top: 12px; font-weight: 700; color: var(--text-secondary);">₹</span>
-                                <input type="number" step="0.01" min="0.01" id="amount" name="amount" class="form-control" style="padding-left: 30px; font-size: 1.15rem; font-weight: 700;" placeholder="0.00" value="<?= htmlspecialchars((string)$amount) ?>" required autofocus>
+                            <label class="form-label" for="amount">Amount in Indian Rupees (₹) <span style="color: #f87171;">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-indian-rupee-sign" style="color: #60a5fa;"></i>
+                                <input type="number" step="0.01" min="0.01" id="amount" name="amount" class="form-control" style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700;" placeholder="0.00" value="<?= htmlspecialchars((string)$amount) ?>" required autofocus>
                             </div>
                         </div>
 
                         <!-- Category Selector -->
                         <div class="form-group">
-                            <label class="form-label" for="category_id">Category</label>
+                            <label class="form-label" for="category_id">Category Allocation <span style="color: #f87171;">*</span></label>
                             <select id="category_id" name="category_id" class="form-select" required>
-                                <option value="">Select Category...</option>
+                                <option value="">-- Choose Category --</option>
                                 <?php foreach ($allCategories as $cat): ?>
                                     <option value="<?= $cat['category_id'] ?>" data-type="<?= $cat['category_type'] ?>" <?= ($categoryId == $cat['category_id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($cat['category_name']) ?> (<?= ucfirst($cat['category_type']) ?>)
+                                        [<?= ucfirst($cat['category_type']) ?>] <?= htmlspecialchars($cat['category_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -185,21 +215,21 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                         <!-- Date Picker -->
                         <div class="form-group">
-                            <label class="form-label" for="transaction_date">Date of Transaction</label>
+                            <label class="form-label" for="transaction_date">Date of Transaction <span style="color: #f87171;">*</span></label>
                             <input type="date" id="transaction_date" name="transaction_date" class="form-control" value="<?= htmlspecialchars($transactionDate) ?>" required>
                         </div>
 
                         <!-- Description -->
                         <div class="form-group">
-                            <label class="form-label" for="description">Description / Note</label>
-                            <input type="text" id="description" name="description" class="form-control" placeholder="e.g. Grocery store, Client invoice, Dinner..." value="<?= htmlspecialchars($description) ?>" required>
+                            <label class="form-label" for="description">Description / Narrative <span style="color: #f87171;">*</span></label>
+                            <input type="text" id="description" name="description" class="form-control" placeholder="e.g. Grocery store, Consulting payout, Power bill..." value="<?= htmlspecialchars($description) ?>" required>
                         </div>
 
-                        <div style="display: flex; gap: 12px; margin-top: 24px;">
-                            <button type="submit" class="btn btn-primary" style="flex: 1; padding: 12px;">
+                        <div style="display: flex; gap: 12px; margin-top: 28px;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1; padding: 13px; font-weight: 700;">
                                 <i class="fa-solid fa-check"></i> Save Transaction
                             </button>
-                            <a href="transactions.php" class="btn btn-outline">Cancel</a>
+                            <a href="transactions.php" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -209,7 +239,6 @@ require_once __DIR__ . '/includes/sidebar.php';
     </div> <!-- End content-body -->
 
 <script>
-// Dynamic Category Filter by Type
 document.addEventListener('DOMContentLoaded', () => {
     const radioExpense = document.getElementById('radioExpense');
     const radioIncome = document.getElementById('radioIncome');
@@ -219,22 +248,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateTypeUI(type) {
         if (type === 'expense') {
-            btnExpense.style.borderColor = '#ef4444';
-            btnExpense.style.background = '#fee2e2';
-            btnExpense.style.color = '#b91c1c';
-            btnIncome.style.borderColor = '#e2e8f0';
-            btnIncome.style.background = '#ffffff';
-            btnIncome.style.color = '#64748b';
+            btnExpense.style.borderColor = 'rgba(244, 63, 94, 0.6)';
+            btnExpense.style.background = 'rgba(244, 63, 94, 0.2)';
+            btnExpense.style.color = '#fb7185';
+            btnIncome.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            btnIncome.style.background = 'rgba(20, 31, 54, 0.6)';
+            btnIncome.style.color = '#94a3b8';
         } else {
-            btnIncome.style.borderColor = '#10b981';
-            btnIncome.style.background = '#d1fae5';
-            btnIncome.style.color = '#065f46';
-            btnExpense.style.borderColor = '#e2e8f0';
-            btnExpense.style.background = '#ffffff';
-            btnExpense.style.color = '#64748b';
+            btnIncome.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+            btnIncome.style.background = 'rgba(16, 185, 129, 0.2)';
+            btnIncome.style.color = '#34d399';
+            btnExpense.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            btnExpense.style.background = 'rgba(20, 31, 54, 0.6)';
+            btnExpense.style.color = '#94a3b8';
         }
 
-        // Filter category dropdown options
         Array.from(categorySelect.options).forEach(opt => {
             if (!opt.value) return;
             const optType = opt.getAttribute('data-type');
@@ -249,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
     radioExpense.addEventListener('change', () => updateTypeUI('expense'));
     radioIncome.addEventListener('change', () => updateTypeUI('income'));
 
-    // Initial run
     updateTypeUI(radioIncome.checked ? 'income' : 'expense');
 });
 </script>

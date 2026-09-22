@@ -1,7 +1,7 @@
 <?php
 /**
- * Global Footer Include
- * Includes Shared Modals, Confirmation Dialogs, Responsive Drawer Logic, and Chart.js
+ * Global Footer Include - ExpenseIQ Modern Fintech SaaS
+ * Includes Shared Modals, Confirmation Dialogs, Responsive Drawer Logic, Chart.js, and Floating AI Assistant
  */
 declare(strict_types=1);
 
@@ -42,13 +42,13 @@ if ($user && isset($pdo)) {
                 <div class="form-group">
                     <label class="form-label">Transaction Classification</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer; font-weight: 700; font-size: 0.9rem; background: #fff;" id="modalExpenseLabel">
+                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); cursor: pointer; font-weight: 700; font-size: 0.9rem; background: rgba(20, 31, 54, 0.7); transition: var(--transition);" id="modalExpenseLabel">
                             <input type="radio" name="transaction_type" value="expense" checked onchange="toggleModalType('expense')" style="accent-color: var(--danger);">
-                            <span style="color: var(--danger);"><i class="fa-solid fa-arrow-down"></i> Expense</span>
+                            <span style="color: var(--danger-text);"><i class="fa-solid fa-arrow-down"></i> Expense</span>
                         </label>
-                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-md); cursor: pointer; font-weight: 700; font-size: 0.9rem; background: #fff;" id="modalIncomeLabel">
+                        <label style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-md); cursor: pointer; font-weight: 700; font-size: 0.9rem; background: rgba(20, 31, 54, 0.7); transition: var(--transition);" id="modalIncomeLabel">
                             <input type="radio" name="transaction_type" value="income" onchange="toggleModalType('income')" style="accent-color: var(--success);">
-                            <span style="color: var(--success);"><i class="fa-solid fa-arrow-up"></i> Income</span>
+                            <span style="color: var(--success-text);"><i class="fa-solid fa-arrow-up"></i> Income</span>
                         </label>
                     </div>
                 </div>
@@ -59,7 +59,7 @@ if ($user && isset($pdo)) {
                         <label class="form-label">Amount (₹) <span style="color: var(--danger);">*</span></label>
                         <div class="input-icon-wrapper">
                             <i class="fa-solid fa-indian-rupee-sign"></i>
-                            <input type="number" step="0.01" min="0.01" name="amount" required placeholder="0.00" class="form-control" style="font-family: monospace; font-size: 1rem; font-weight: 700;">
+                            <input type="number" step="0.01" min="0.01" name="amount" required placeholder="0.00" class="form-control" style="font-family: var(--font-mono); font-size: 1rem; font-weight: 700;">
                         </div>
                     </div>
                     <div class="form-group">
@@ -215,7 +215,7 @@ function toggleModalType(type) {
 
 // Global Confirmation Dialog Interceptor
 let confirmCallback = null;
-function confirmAction(message, onConfirm, title = 'Confirm Deletion') {
+function confirmAction(message, onConfirm, title = 'Confirm Action') {
     const modal = document.getElementById('confirmDialogModal');
     const titleEl = document.getElementById('confirmDialogTitle');
     const msgEl = document.getElementById('confirmDialogMessage');
@@ -256,6 +256,9 @@ function closeConfirmDialog() {
         <script src="<?= htmlspecialchars($script) ?>"></script>
     <?php endforeach; ?>
 <?php endif; ?>
+
+<!-- Floating Ask Me Help AI Chatbot -->
+<?php require_once __DIR__ . '/chatbot.php'; ?>
 
 </body>
 </html>

@@ -96,7 +96,7 @@ function sanitize(string $data): string {
  * Reusable Indian Rupee (INR) formatting with Indian numbering system (Lakhs, Crores)
  * e.g. ₹500, ₹1,500, ₹18,500, ₹50,000, ₹1,00,000, ₹10,00,000, ₹1,00,00,000
  */
-function formatINR(float|int|string $amount, bool $forceDecimals = false): string {
+function formatINR(float|int|string $amount, bool $forceDecimals = true): string {
     $num = (float)$amount;
     $isNegative = $num < 0;
     $absNum = abs($num);
@@ -130,7 +130,7 @@ function formatINR(float|int|string $amount, bool $forceDecimals = false): strin
 /**
  * Standardize currency formatting using Indian Rupees (INR)
  */
-function format_currency(float|int|string $amount, bool $forceDecimals = false): string {
+function format_currency(float|int|string $amount, bool $forceDecimals = true): string {
     return formatINR($amount, $forceDecimals);
 }
 

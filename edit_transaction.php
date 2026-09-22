@@ -1,7 +1,7 @@
 <?php
 /**
- * Edit Existing Transaction
- * Validates ownership and applies changes using UPDATE prepared statements
+ * Edit Transaction Handler & Form - ExpenseIQ Fintech SaaS
+ * Edit existing transaction details with ownership authorization & input validation
  */
 declare(strict_types=1);
 
@@ -13,27 +13,38 @@ $userId = $user['id'];
 $pdo = getDBConnection();
 
 $pageTitle = 'Edit Transaction';
-$currentPage = 'edit_transaction';
+$currentPage = 'transactions';
 
 $transactionId = (int)($_GET['id'] ?? 0);
 if ($transactionId <= 0) {
-    set_flash('danger', 'Invalid transaction specified.');
+    set_flash('danger', 'Invalid transaction identifier provided.');
     header('Location: transactions.php');
     exit;
 }
 
-// Fetch transaction ensuring user ownership
-$stmt = $pdo->prepare("SELECT * FROM transactions WHERE transaction_id = ? AND user_id = ?");
+// Fetch existing transaction
+$stmt = $pdo->prepare("
+    SELECT transaction_id, amount, transaction_type, category_id, transaction_date, description
+    FROM transactions
+    WHERE transaction_id = ? AND user_id = ?
+");
 $stmt->execute([$transactionId, $userId]);
 $transaction = $stmt->fetch();
 
 if (!$transaction) {
-    set_flash('danger', 'Transaction not found or unauthorized access.');
+    set_flash('warning', 'Transaction not found or you are not authorized to modify it.');
     header('Location: transactions.php');
     exit;
 }
 
-// Fetch available categories
+$errors = [];
+$amount = $transaction['amount'];
+$type = $transaction['transaction_type'];
+$categoryId = $transaction['category_id'];
+$transactionDate = $transaction['transaction_date'];
+$description = $transaction['description'];
+
+// Fetch categories
 $stmtCats = $pdo->prepare("
     SELECT category_id, category_name, category_type 
     FROM categories 
@@ -43,57 +54,60 @@ $stmtCats = $pdo->prepare("
 $stmtCats->execute([$userId]);
 $categories = $stmtCats->fetchAll();
 
-$errors = [];
-$type = $transaction['transaction_type'];
-$amount = $transaction['amount'];
-$categoryId = $transaction['category_id'];
-$description = $transaction['description'];
-$transactionDate = $transaction['transaction_date'];
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $type = trim($_POST['transaction_type'] ?? 'expense');
-    $amountInput = trim($_POST['amount'] ?? '');
-    $categoryId = (int)($_POST['category_id'] ?? 0);
-    $description = trim($_POST['description'] ?? '');
-    $transactionDate = trim($_POST['transaction_date'] ?? date('Y-m-d'));
-    $csrfToken = $_POST['csrf_token'] ?? '';
+    $csrfToken       = $_POST['csrf_token'] ?? '';
+    $amount          = trim($_POST['amount'] ?? '');
+    $type            = trim($_POST['transaction_type'] ?? 'expense');
+    $categoryId      = (int)($_POST['category_id'] ?? 0);
+    $transactionDate = trim($_POST['transaction_date'] ?? '');
+    $description     = trim($_POST['description'] ?? '');
 
+    // CSRF Check
     if (!verify_csrf_token($csrfToken)) {
-        $errors[] = 'Invalid security token. Please try again.';
+        $errors[] = 'Security token validation failed. Please refresh the page and try again.';
+    }
+
+    if (!is_numeric($amount) || (float)$amount <= 0) {
+        $errors[] = 'Please provide a valid monetary amount greater than zero.';
     }
 
     if (!in_array($type, ['income', 'expense'])) {
-        $errors[] = 'Invalid transaction type.';
+        $errors[] = 'Invalid transaction classification.';
     }
 
-    if (!is_numeric($amountInput) || (float)$amountInput <= 0) {
-        $errors[] = 'Please enter a valid positive numerical amount.';
-    } else {
-        $amount = round((float)$amountInput, 2);
-    }
-
-    if (empty($categoryId)) {
+    if ($categoryId <= 0) {
         $errors[] = 'Please select a valid category.';
     }
 
-    if (empty($description)) {
-        $errors[] = 'Please provide a short description for this transaction.';
+    if (empty($transactionDate) || !strtotime($transactionDate)) {
+        $errors[] = 'Please enter a valid transaction date.';
     }
 
-    if (empty($transactionDate)) {
-        $errors[] = 'Please provide a valid date.';
+    if (empty($description)) {
+        $errors[] = 'Description cannot be empty.';
+    } elseif (strlen($description) > 255) {
+        $errors[] = 'Description must not exceed 255 characters.';
     }
 
     if (empty($errors)) {
         try {
-            $updateStmt = $pdo->prepare("
+            $amountVal = (float)$amount;
+            $stmtUpdate = $pdo->prepare("
                 UPDATE transactions 
-                SET category_id = ?, amount = ?, transaction_type = ?, description = ?, transaction_date = ?
+                SET amount = ?, transaction_type = ?, category_id = ?, transaction_date = ?, description = ?
                 WHERE transaction_id = ? AND user_id = ?
             ");
-            $updateStmt->execute([$categoryId, $amount, $type, $description, $transactionDate, $transactionId, $userId]);
+            $stmtUpdate->execute([
+                $amountVal,
+                $type,
+                $categoryId,
+                $transactionDate,
+                $description,
+                $transactionId,
+                $userId
+            ]);
 
-            set_flash('success', 'Transaction updated successfully!');
+            set_flash('success', 'Transaction #' . $transactionId . ' was updated successfully!');
             header('Location: transactions.php');
             exit;
         } catch (Exception $e) {
@@ -112,8 +126,11 @@ require_once __DIR__ . '/includes/sidebar.php';
     <div class="content-body">
         <div style="max-width: 680px; margin: 0 auto;">
             
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
-                <h2>Edit Transaction #<?= $transactionId ?></h2>
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px;">
+                <div>
+                    <h2 style="font-size: 1.45rem; font-weight: 800; color: #ffffff; margin: 0 0 4px 0;">Edit Transaction #<?= $transactionId ?></h2>
+                    <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">Modify amount, classification, category or narrative</p>
+                </div>
                 <a href="transactions.php" class="btn btn-outline btn-sm">
                     <i class="fa-solid fa-arrow-left"></i> Back to Ledger
                 </a>
@@ -137,18 +154,18 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                         <!-- Type Selector -->
                         <div class="form-group">
-                            <label class="form-label">Transaction Type</label>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <label class="form-label">Transaction Classification</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                                 <label style="cursor: pointer;">
                                     <input type="radio" name="transaction_type" value="expense" <?= ($type === 'expense') ? 'checked' : '' ?> style="display: none;" id="radioExpense">
-                                    <div id="btnTypeExpense" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid <?= ($type === 'expense') ? '#ef4444' : '#e2e8f0' ?>; background: <?= ($type === 'expense') ? '#fee2e2' : '#ffffff' ?>; font-weight: 700; color: <?= ($type === 'expense') ? '#b91c1c' : '#64748b' ?>;">
-                                        <i class="fa-solid fa-arrow-trend-down"></i> Expense
+                                    <div id="btnTypeExpense" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid <?= ($type === 'expense') ? 'rgba(244, 63, 94, 0.6)' : 'rgba(255, 255, 255, 0.1)' ?>; background: <?= ($type === 'expense') ? 'rgba(244, 63, 94, 0.2)' : 'rgba(20, 31, 54, 0.6)' ?>; font-weight: 700; color: <?= ($type === 'expense') ? '#fb7185' : '#94a3b8' ?>; transition: var(--transition);">
+                                        <i class="fa-solid fa-arrow-trend-down"></i> Expense (Debit)
                                     </div>
                                 </label>
                                 <label style="cursor: pointer;">
                                     <input type="radio" name="transaction_type" value="income" <?= ($type === 'income') ? 'checked' : '' ?> style="display: none;" id="radioIncome">
-                                    <div id="btnTypeIncome" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid <?= ($type === 'income') ? '#10b981' : '#e2e8f0' ?>; background: <?= ($type === 'income') ? '#d1fae5' : '#ffffff' ?>; font-weight: 700; color: <?= ($type === 'income') ? '#065f46' : '#64748b' ?>;">
-                                        <i class="fa-solid fa-arrow-trend-up"></i> Income
+                                    <div id="btnTypeIncome" style="padding: 14px; text-align: center; border-radius: var(--radius-md); border: 2px solid <?= ($type === 'income') ? 'rgba(16, 185, 129, 0.6)' : 'rgba(255, 255, 255, 0.1)' ?>; background: <?= ($type === 'income') ? 'rgba(16, 185, 129, 0.2)' : 'rgba(20, 31, 54, 0.6)' ?>; font-weight: 700; color: <?= ($type === 'income') ? '#34d399' : '#94a3b8' ?>; transition: var(--transition);">
+                                        <i class="fa-solid fa-arrow-trend-up"></i> Income (Credit)
                                     </div>
                                 </label>
                             </div>
@@ -156,20 +173,20 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                         <!-- Amount Input -->
                         <div class="form-group">
-                            <label class="form-label" for="amount">Amount (₹)</label>
-                            <div style="position: relative;">
-                                <span style="position: absolute; left: 14px; top: 12px; font-weight: 700; color: var(--text-secondary);">₹</span>
-                                <input type="number" step="0.01" min="0.01" id="amount" name="amount" class="form-control" style="padding-left: 30px; font-size: 1.15rem; font-weight: 700;" value="<?= htmlspecialchars((string)$amount) ?>" required>
+                            <label class="form-label" for="amount">Amount in Indian Rupees (₹) <span style="color: #f87171;">*</span></label>
+                            <div class="input-icon-wrapper">
+                                <i class="fa-solid fa-indian-rupee-sign" style="color: #60a5fa;"></i>
+                                <input type="number" step="0.01" min="0.01" id="amount" name="amount" class="form-control" style="font-family: var(--font-mono); font-size: 1.15rem; font-weight: 700;" value="<?= htmlspecialchars((string)$amount) ?>" required>
                             </div>
                         </div>
 
                         <!-- Category Selector -->
                         <div class="form-group">
-                            <label class="form-label" for="category_id">Category</label>
+                            <label class="form-label" for="category_id">Category Allocation <span style="color: #f87171;">*</span></label>
                             <select id="category_id" name="category_id" class="form-select" required>
                                 <?php foreach ($categories as $cat): ?>
                                     <option value="<?= $cat['category_id'] ?>" data-type="<?= $cat['category_type'] ?>" <?= ($categoryId == $cat['category_id']) ? 'selected' : '' ?>>
-                                        <?= htmlspecialchars($cat['category_name']) ?> (<?= ucfirst($cat['category_type']) ?>)
+                                        [<?= ucfirst($cat['category_type']) ?>] <?= htmlspecialchars($cat['category_name']) ?>
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -177,28 +194,28 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                         <!-- Date Picker -->
                         <div class="form-group">
-                            <label class="form-label" for="transaction_date">Date of Transaction</label>
+                            <label class="form-label" for="transaction_date">Date of Transaction <span style="color: #f87171;">*</span></label>
                             <input type="date" id="transaction_date" name="transaction_date" class="form-control" value="<?= htmlspecialchars($transactionDate) ?>" required>
                         </div>
 
                         <!-- Description -->
                         <div class="form-group">
-                            <label class="form-label" for="description">Description / Note</label>
+                            <label class="form-label" for="description">Description / Narrative <span style="color: #f87171;">*</span></label>
                             <input type="text" id="description" name="description" class="form-control" value="<?= htmlspecialchars($description) ?>" required>
                         </div>
 
-                        <div style="display: flex; gap: 12px; margin-top: 24px;">
-                            <button type="submit" class="btn btn-primary" style="flex: 1; padding: 12px;">
-                                <i class="fa-solid fa-floppy-disk"></i> Update Transaction
+                        <div style="display: flex; gap: 12px; margin-top: 28px;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1; padding: 13px; font-weight: 700;">
+                                <i class="fa-solid fa-floppy-disk"></i> Save Modifications
                             </button>
-                            <a href="transactions.php" class="btn btn-outline">Cancel</a>
+                            <a href="transactions.php" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
             </div>
 
         </div>
-    </div>
+    </div> <!-- End content-body -->
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
@@ -206,27 +223,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const radioIncome = document.getElementById('radioIncome');
     const btnExpense = document.getElementById('btnTypeExpense');
     const btnIncome = document.getElementById('btnTypeIncome');
+    const categorySelect = document.getElementById('category_id');
 
     function updateTypeUI(type) {
         if (type === 'expense') {
-            btnExpense.style.borderColor = '#ef4444';
-            btnExpense.style.background = '#fee2e2';
-            btnExpense.style.color = '#b91c1c';
-            btnIncome.style.borderColor = '#e2e8f0';
-            btnIncome.style.background = '#ffffff';
-            btnIncome.style.color = '#64748b';
+            btnExpense.style.borderColor = 'rgba(244, 63, 94, 0.6)';
+            btnExpense.style.background = 'rgba(244, 63, 94, 0.2)';
+            btnExpense.style.color = '#fb7185';
+            btnIncome.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            btnIncome.style.background = 'rgba(20, 31, 54, 0.6)';
+            btnIncome.style.color = '#94a3b8';
         } else {
-            btnIncome.style.borderColor = '#10b981';
-            btnIncome.style.background = '#d1fae5';
-            btnIncome.style.color = '#065f46';
-            btnExpense.style.borderColor = '#e2e8f0';
-            btnExpense.style.background = '#ffffff';
-            btnExpense.style.color = '#64748b';
+            btnIncome.style.borderColor = 'rgba(16, 185, 129, 0.6)';
+            btnIncome.style.background = 'rgba(16, 185, 129, 0.2)';
+            btnIncome.style.color = '#34d399';
+            btnExpense.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            btnExpense.style.background = 'rgba(20, 31, 54, 0.6)';
+            btnExpense.style.color = '#94a3b8';
         }
+
+        Array.from(categorySelect.options).forEach(opt => {
+            if (!opt.value) return;
+            const optType = opt.getAttribute('data-type');
+            if (optType === type) {
+                opt.style.display = '';
+            } else {
+                opt.style.display = 'none';
+            }
+        });
     }
 
     radioExpense.addEventListener('change', () => updateTypeUI('expense'));
     radioIncome.addEventListener('change', () => updateTypeUI('income'));
+
+    updateTypeUI(radioIncome.checked ? 'income' : 'expense');
 });
 </script>
 

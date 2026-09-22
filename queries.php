@@ -644,98 +644,105 @@ require_once __DIR__ . '/includes/sidebar.php';
     <div class="content-body">
         <?php if ($flash): ?>
             <div class="flash-alert flash-<?= htmlspecialchars($flash['type']) ?>">
-                <i class="fa-solid fa-circle-info"></i>
+                <i class="fa-solid fa-circle-check"></i>
                 <span><?= htmlspecialchars($flash['message']) ?></span>
             </div>
         <?php endif; ?>
 
         <!-- Educational Header Card -->
-        <div class="card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; border: none; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.4);">
+        <div class="card" style="background: linear-gradient(135deg, rgba(14, 21, 38, 0.9) 0%, rgba(30, 27, 75, 0.8) 50%, rgba(6, 78, 59, 0.6) 100%); color: white; border: 1px solid rgba(99, 102, 241, 0.35); margin-bottom: 24px; box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6);">
             <div class="card-body" style="padding: 28px;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
                     <div style="display: flex; align-items: center; gap: 16px;">
-                        <div style="width: 52px; height: 52px; border-radius: 14px; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 8px 16px rgba(59, 130, 246, 0.4);">
-                            <i class="fa-solid fa-database"></i>
+                        <div style="width: 54px; height: 54px; border-radius: var(--radius-md); background: linear-gradient(135deg, #3b82f6, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 1.6rem; box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);">
+                            <i class="fa-solid fa-terminal" style="color: #ffffff;"></i>
                         </div>
                         <div>
-                            <h2 style="color: white; margin: 0 0 4px 0; font-size: 1.65rem; font-weight: 700;">DBMS SQL Query Demonstration Catalog</h2>
-                            <span style="color: #94a3b8; font-size: 0.92rem;">College DBMS Academic Project • 20 Core SQL Queries • 3NF Normalized Schema</span>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                                <span class="badge" style="background: rgba(99, 102, 241, 0.25); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4);">
+                                    <i class="fa-solid fa-database"></i> Relational DBMS
+                                </span>
+                                <span class="badge badge-outline">20 Essential Queries</span>
+                            </div>
+                            <h2 style="color: white; margin: 0 0 4px 0; font-size: 1.65rem; font-weight: 800; letter-spacing: -0.02em;">DBMS SQL Demonstration Console</h2>
+                            <span style="color: #93c5fd; font-size: 0.88rem;">Academic Relational Algebra • 3NF Normalized Schema Verification • Live Query Execution</span>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-secondary" onclick="toggleNormalizationGuide()" style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); color: white; display: flex; align-items: center; gap: 8px;">
-                        <i class="fa-solid fa-book-open"></i>
+                    <button type="button" class="btn btn-outline" onclick="toggleNormalizationGuide()" style="border-color: rgba(255,255,255,0.2); color: #ffffff; background: rgba(255,255,255,0.06); display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-book-open" style="color: var(--accent-cyan);"></i>
                         <span id="normGuideBtnText">View Normalization Guide (1NF, 2NF, 3NF)</span>
                     </button>
                 </div>
 
-                <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6; max-width: 950px; margin-top: 16px; margin-bottom: 0;">
-                    This catalog demonstrates the <strong>20 essential SQL queries</strong> powering the Smart Expense Tracker. 
-                    Each card highlights the <strong>DBMS Concept</strong>, <strong>Tables Involved</strong>, <strong>Parameterized SQL</strong>, 
-                    <strong>Academic Rationale</strong>, <strong>Application Usage</strong>, and <strong>Live Database Execution Output</strong>.
+                <p style="color: #94a3b8; font-size: 0.92rem; line-height: 1.6; max-width: 950px; margin-top: 16px; margin-bottom: 0;">
+                    This console provides complete architectural transparency for the <strong style="color: #e2e8f0;">20 core SQL queries</strong> executing across ExpenseIQ. 
+                    Each card analyzes the <strong style="color: var(--accent-cyan);">DBMS Theoretical Concept</strong>, <strong style="color: #e2e8f0;">Tables Involved</strong>, 
+                    <strong style="color: var(--accent-emerald);">Parameterized PDO Query</strong>, <strong style="color: var(--accent-purple);">Application Integration</strong>, 
+                    and returns live records directly from your active MySQL database.
                 </p>
             </div>
         </div>
 
         <!-- Collapsible DBMS Schema & Normalization Guide -->
-        <div id="normalizationGuideCard" class="card" style="display: none; border: 1px solid #3b82f6; background: #f8fafc; margin-bottom: 24px; animation: fadeIn 0.3s ease-in-out;">
-            <div class="card-header" style="background: #eff6ff; border-bottom: 1px solid #bfdbfe; display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; font-size: 1.15rem; color: #1e3a8a; display: flex; align-items: center; gap: 10px;">
-                    <i class="fa-solid fa-diagram-project" style="color: #3b82f6;"></i>
-                    Relational Schema Verification & Normalization Proofs
+        <div id="normalizationGuideCard" class="card" style="display: none; border: 1px solid rgba(99, 102, 241, 0.4); background: rgba(14, 21, 38, 0.95); margin-bottom: 24px; animation: fadeIn 0.3s ease-in-out;">
+            <div class="card-header" style="background: rgba(30, 41, 59, 0.5); border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; font-size: 1.15rem; color: var(--text-primary); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-diagram-project" style="color: var(--accent-cyan);"></i>
+                    Relational Schema Proofs & 3NF Normalization Manifesto
                 </h3>
-                <button type="button" onclick="toggleNormalizationGuide()" style="background: none; border: none; font-size: 1.1rem; color: #64748b; cursor: pointer;">
+                <button type="button" onclick="toggleNormalizationGuide()" style="background: none; border: none; font-size: 1.1rem; color: var(--text-secondary); cursor: pointer;">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
             <div class="card-body" style="padding: 24px;">
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 20px;">
                     <!-- 1NF Card -->
-                    <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+                    <div style="background: rgba(8, 12, 22, 0.6); border: 1px solid rgba(6, 182, 212, 0.3); border-radius: var(--radius-md); padding: 18px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                            <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700; font-size: 0.85rem;">1NF Verified</span>
+                            <span class="badge" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan); font-weight: 700; font-size: 0.82rem;">1NF Verified</span>
                             <strong style="color: var(--text-primary);">First Normal Form</strong>
                         </div>
-                        <ul style="margin: 0; padding-left: 18px; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6;">
-                            <li><strong>Atomic Attributes:</strong> All fields store indivisible single values (no CSV arrays or multi-valued fields).</li>
-                            <li><strong>Primary Keys:</strong> Each relation defines a unique surrogate key (<code>user_id</code>, <code>transaction_id</code>, etc.).</li>
-                            <li><strong>Consistency:</strong> Column domain constraints strictly typed.</li>
+                        <ul style="margin: 0; padding-left: 18px; font-size: 0.86rem; color: var(--text-secondary); line-height: 1.6;">
+                            <li><strong>Atomic Attributes:</strong> All fields store indivisible primitive values (no CSV strings or nested arrays).</li>
+                            <li><strong>Surrogate Keys:</strong> Each relation defines an auto-incrementing primary key (<code>user_id</code>, <code>transaction_id</code>, etc.).</li>
+                            <li><strong>Domain Constraints:</strong> Strictly typed SQL data types (<code>DECIMAL(10,2)</code>, <code>DATE</code>, <code>VARCHAR</code>).</li>
                         </ul>
                     </div>
 
                     <!-- 2NF Card -->
-                    <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+                    <div style="background: rgba(8, 12, 22, 0.6); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 18px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                            <span class="badge" style="background: #f0fdf4; color: #15803d; font-weight: 700; font-size: 0.85rem;">2NF Verified</span>
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); font-weight: 700; font-size: 0.82rem;">2NF Verified</span>
                             <strong style="color: var(--text-primary);">Second Normal Form</strong>
                         </div>
-                        <ul style="margin: 0; padding-left: 18px; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6;">
-                            <li><strong>No Partial Dependency:</strong> Every non-prime attribute is fully functionally dependent on the entire primary key.</li>
-                            <li><strong>Single-Attribute Keys:</strong> Surrogate keys eliminate composite candidate key partial dependencies.</li>
+                        <ul style="margin: 0; padding-left: 18px; font-size: 0.86rem; color: var(--text-secondary); line-height: 1.6;">
+                            <li><strong>Full Functional Dependency:</strong> Satisfies 1NF and guarantees no partial dependencies exist.</li>
+                            <li><strong>Atomic Keys:</strong> Single-column primary keys ensure every non-prime attribute depends on the full key.</li>
                         </ul>
                     </div>
 
                     <!-- 3NF Card -->
-                    <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 18px;">
+                    <div style="background: rgba(8, 12, 22, 0.6); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: var(--radius-md); padding: 18px;">
                         <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                            <span class="badge" style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 0.85rem;">3NF & BCNF Verified</span>
+                            <span class="badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple); font-weight: 700; font-size: 0.82rem;">3NF & BCNF Verified</span>
                             <strong style="color: var(--text-primary);">Third Normal Form</strong>
                         </div>
-                        <ul style="margin: 0; padding-left: 18px; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6;">
-                            <li><strong>No Transitive Dependency:</strong> Non-prime attributes depend ONLY on the primary key ($X \rightarrow Y$ holds only when $X$ is a superkey).</li>
-                            <li><code>transactions</code> stores only <code>category_id</code>, referencing <code>categories</code> rather than duplicating category names or colors.</li>
+                        <ul style="margin: 0; padding-left: 18px; font-size: 0.86rem; color: var(--text-secondary); line-height: 1.6;">
+                            <li><strong>Zero Transitive Dependency:</strong> Non-prime attributes depend only on candidate superkeys.</li>
+                            <li><code>transactions</code> stores solely <code>category_id</code>, eliminating redundant names, colors, and icons.</li>
                         </ul>
                     </div>
                 </div>
 
-                <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: var(--radius-md); padding: 16px;">
-                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-primary); margin-bottom: 8px;">
-                        <i class="fa-solid fa-shield-halved" style="color: var(--primary);"></i> DBMS Integrity & Precision Engineering:
+                <div style="background: rgba(8, 12, 22, 0.6); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-md); padding: 18px;">
+                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-primary); margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-shield-halved" style="color: var(--accent-primary);"></i> Production DBMS Integrity & Financial Precision:
                     </div>
-                    <div style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.7;">
-                        • <strong>DECIMAL(10,2) Precision:</strong> Used across all financial columns (<code>amount</code>, <code>budget_amount</code>, <code>target_amount</code>) to guarantee zero IEEE-754 binary floating-point roundoff loss.<br>
-                        • <strong>Referential Integrity:</strong> Strict Foreign Keys configured with <code>ON DELETE CASCADE</code> for user removal and <code>ON DELETE RESTRICT</code> on categories to prevent orphan transactions.<br>
-                        • <strong>Strategic Indexing:</strong> B-Tree indexes on <code>(user_id, transaction_date)</code>, <code>(user_id, transaction_type, transaction_date)</code>, and foreign keys optimize range and join queries.<br>
-                        • <strong>Relational Views:</strong> Includes <code>v_monthly_financial_summary</code>, <code>v_budget_status</code>, and <code>v_category_spending</code>.
+                    <div style="font-size: 0.86rem; color: var(--text-secondary); line-height: 1.7;">
+                        • <strong>DECIMAL(10,2) Precision:</strong> Enforced across all monetary fields (<code>amount</code>, <code>budget_amount</code>, <code>saved_amount</code>) to eliminate IEEE-754 binary floating-point roundoff errors.<br>
+                        • <strong>Referential Integrity:</strong> Strict Foreign Keys configured with <code>ON DELETE CASCADE</code> for account removal and <code>ON DELETE RESTRICT</code> on categories to prevent orphan rows.<br>
+                        • <strong>B-Tree Composite Indexes:</strong> High-speed lookup indexing on <code>(user_id, transaction_date)</code>, <code>(user_id, transaction_type, transaction_date)</code>.<br>
+                        • <strong>Relational Materialized Views:</strong> Employs <code>v_monthly_financial_summary</code>, <code>v_budget_status</code>, and <code>v_category_spending</code>.
                     </div>
                 </div>
             </div>
@@ -750,27 +757,27 @@ require_once __DIR__ . '/includes/sidebar.php';
                         <button type="button" class="btn btn-sm btn-primary active-filter" onclick="filterQueries('all', this)">
                             All Queries (20)
                         </button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="filterQueries('dql', this)">
+                        <button type="button" class="btn btn-sm btn-outline" onclick="filterQueries('dql', this)" style="border-color: rgba(255,255,255,0.12); color: var(--text-secondary);">
                             Basic & DQL (1, 5, 6)
                         </button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="filterQueries('dml', this)">
+                        <button type="button" class="btn btn-sm btn-outline" onclick="filterQueries('dml', this)" style="border-color: rgba(255,255,255,0.12); color: var(--text-secondary);">
                             CRUD & DML (2, 3, 4)
                         </button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="filterQueries('aggregates', this)">
-                            Aggregates (7, 8, 9, 10, 11, 12, 13)
+                        <button type="button" class="btn btn-sm btn-outline" onclick="filterQueries('aggregates', this)" style="border-color: rgba(255,255,255,0.12); color: var(--text-secondary);">
+                            Aggregates (7-13)
                         </button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="filterQueries('joins', this)">
-                            Relational Joins (14, 15, 16)
+                        <button type="button" class="btn btn-sm btn-outline" onclick="filterQueries('joins', this)" style="border-color: rgba(255,255,255,0.12); color: var(--text-secondary);">
+                            Relational Joins (14-16)
                         </button>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="filterQueries('analytics', this)">
-                            Advanced Analytics (17, 18, 19, 20)
+                        <button type="button" class="btn btn-sm btn-outline" onclick="filterQueries('analytics', this)" style="border-color: rgba(255,255,255,0.12); color: var(--text-secondary);">
+                            Advanced Analytics (17-20)
                         </button>
                     </div>
 
                     <!-- Instant Search -->
-                    <div style="position: relative; min-width: 240px;">
-                        <input type="text" id="querySearchInput" onkeyup="searchQueries()" placeholder="Search title, table, or concept..." class="form-control" style="padding-left: 36px; height: 38px; font-size: 0.88rem;">
-                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 12px; color: #94a3b8; font-size: 0.85rem;"></i>
+                    <div style="position: relative; min-width: 260px;">
+                        <input type="text" id="querySearchInput" onkeyup="searchQueries()" placeholder="Search SQL, table, or concept..." class="form-control" style="padding-left: 36px; height: 38px; font-size: 0.86rem; font-family: var(--font-mono);">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 12px; color: var(--text-muted); font-size: 0.85rem;"></i>
                     </div>
                 </div>
             </div>
@@ -792,7 +799,7 @@ require_once __DIR__ . '/includes/sidebar.php';
                                 $results = $q['sample_output'] ?? [];
                             }
                         } catch (Exception $e) {
-                            $results = [['Execution Notice' => 'Database exception or table pending: ' . $e->getMessage()]];
+                            $results = [['Execution Notice' => 'Database notice: ' . $e->getMessage()]];
                         }
                     } elseif (isset($q['sample_output'])) {
                         $results = $q['sample_output'];
@@ -803,10 +810,10 @@ require_once __DIR__ . '/includes/sidebar.php';
                     <!-- Query Header -->
                     <div class="query-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 0.85rem;">
-                                <?= $q['num'] ?>
+                            <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: rgba(99, 102, 241, 0.2); color: var(--accent-primary); font-weight: 800; font-family: var(--font-mono); font-size: 0.88rem; border: 1px solid rgba(99, 102, 241, 0.3);">
+                                #<?= $q['num'] ?>
                             </span>
-                            <strong style="font-size: 1.1rem; color: var(--text-primary);"><?= htmlspecialchars($q['title']) ?></strong>
+                            <strong style="font-size: 1.12rem; color: var(--text-primary);"><?= htmlspecialchars($q['title']) ?></strong>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span class="query-concept-tag"><?= htmlspecialchars($q['badge']) ?></span>
@@ -816,16 +823,16 @@ require_once __DIR__ . '/includes/sidebar.php';
                     <!-- Meta Tags: Tables Involved & App Usage -->
                     <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 14px; font-size: 0.84rem;">
                         <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-weight: 600; color: var(--text-secondary);"><i class="fa-solid fa-table-cells" style="color: #6366f1;"></i> Tables Involved:</span>
+                            <span style="font-weight: 600; color: var(--text-muted);"><i class="fa-solid fa-table-cells" style="color: var(--accent-primary);"></i> Tables Involved:</span>
                             <?php foreach ($q['tables'] as $tbl): ?>
-                                <span class="badge" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-family: monospace; font-size: 0.8rem; padding: 2px 8px;">
+                                <span class="badge badge-outline" style="font-family: var(--font-mono); font-size: 0.76rem; padding: 2px 8px; color: var(--accent-cyan); border-color: rgba(6, 182, 212, 0.3);">
                                     <?= htmlspecialchars($tbl) ?>
                                 </span>
                             <?php endforeach; ?>
                         </div>
                         <div style="display: flex; align-items: center; gap: 6px;">
-                            <span style="font-weight: 600; color: var(--text-secondary);"><i class="fa-solid fa-code" style="color: #10b981;"></i> Application Usage:</span>
-                            <span style="color: #0f766e; font-family: monospace; background: #ccfbf1; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                            <span style="font-weight: 600; color: var(--text-muted);"><i class="fa-solid fa-code" style="color: var(--accent-emerald);"></i> Application Usage:</span>
+                            <span style="color: var(--accent-emerald); font-family: var(--font-mono); background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); padding: 2px 8px; border-radius: 4px; font-size: 0.78rem;">
                                 <?= htmlspecialchars($q['used_in']) ?>
                             </span>
                         </div>
@@ -833,43 +840,47 @@ require_once __DIR__ . '/includes/sidebar.php';
 
                     <!-- SQL Code Box -->
                     <div class="sql-code-box" style="margin-bottom: 14px; position: relative;">
-                        <button type="button" class="btn btn-sm" onclick="copySql(this)" style="position: absolute; right: 10px; top: 10px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: #cbd5e1; font-size: 0.72rem; padding: 3px 8px;" title="Copy SQL statement to clipboard">
+                        <button type="button" class="btn btn-sm" onclick="copySql(this)" style="position: absolute; right: 10px; top: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #cbd5e1; font-size: 0.72rem; padding: 4px 10px;" title="Copy SQL statement to clipboard">
                             <i class="fa-regular fa-copy"></i> <span>Copy SQL</span>
                         </button>
-                        <pre style="margin: 0; white-space: pre-wrap; word-break: break-word; font-family: 'Consolas', 'Fira Code', monospace; font-size: 0.88rem; color: #38bdf8; padding-right: 80px;"><code><?= htmlspecialchars($q['sql']) ?></code></pre>
+                        <pre style="margin: 0; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: 0.88rem; color: #38bdf8; padding-right: 90px; line-height: 1.6;"><code><?= htmlspecialchars($q['sql']) ?></code></pre>
                     </div>
 
                     <!-- Academic Purpose & Explanation -->
-                    <div class="query-explanation" style="margin-bottom: 16px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: var(--radius-sm); padding: 12px 16px; font-size: 0.88rem; color: #92400e;">
-                        <i class="fa-solid fa-graduation-cap" style="color: #d97706; margin-right: 6px;"></i>
-                        <strong>DBMS Academic Purpose:</strong> <?= htmlspecialchars($q['purpose']) ?>
+                    <div class="query-explanation" style="margin-bottom: 16px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-sm); padding: 12px 16px; font-size: 0.88rem; color: #cbd5e1;">
+                        <i class="fa-solid fa-graduation-cap" style="color: var(--accent-primary); margin-right: 6px;"></i>
+                        <strong style="color: #ffffff;">DBMS Academic Rationale:</strong> <?= htmlspecialchars($q['purpose']) ?>
                     </div>
 
                     <!-- Execution Results Table Preview -->
                     <div class="query-result-preview">
-                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+                        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
                             <span style="display: flex; align-items: center; gap: 6px;">
-                                <i class="fa-solid fa-play" style="color: <?= $isLiveExecuted ? 'var(--success)' : '#3b82f6' ?>; font-size: 0.72rem;"></i> 
+                                <i class="fa-solid fa-play" style="color: <?= $isLiveExecuted ? 'var(--accent-emerald)' : 'var(--accent-cyan)' ?>; font-size: 0.72rem;"></i> 
                                 <?= $isLiveExecuted ? 'Live Database Execution' : 'Sample / Schema Execution Result' ?> (<?= count($results) ?> rows)
                             </span>
                             <?php if ($isLiveExecuted): ?>
-                                <span class="badge" style="background: #dcfce7; color: #15803d; font-size: 0.7rem; padding: 2px 6px;">Active Live DB</span>
+                                <span class="badge badge-success" style="font-size: 0.7rem; padding: 2px 8px;">
+                                    <i class="fa-solid fa-circle-check"></i> Active DB Query
+                                </span>
                             <?php else: ?>
-                                <span class="badge" style="background: #e0e7ff; color: #4338ca; font-size: 0.7rem; padding: 2px 6px;">Academic Demo Output</span>
+                                <span class="badge badge-outline" style="font-size: 0.7rem; padding: 2px 8px; color: var(--accent-cyan);">
+                                    Academic Demo Output
+                                </span>
                             <?php endif; ?>
                         </div>
 
                         <?php if (empty($results)): ?>
-                            <div style="font-size: 0.85rem; color: #94a3b8; font-style: italic; padding: 10px;">
+                            <div style="font-size: 0.85rem; color: var(--text-muted); font-style: italic; padding: 12px; background: rgba(8, 12, 22, 0.5); border-radius: var(--radius-sm); border: 1px solid var(--border-card);">
                                 No rows returned for this filter.
                             </div>
                         <?php else: ?>
-                            <div class="table-responsive" style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow-x: auto;">
+                            <div class="table-responsive" style="background: rgba(8, 12, 22, 0.6); border: 1px solid var(--border-card); border-radius: var(--radius-sm); overflow-x: auto;">
                                 <table class="table" style="font-size: 0.84rem; margin-bottom: 0;">
-                                    <thead style="background: #f8fafc; border-bottom: 1px solid var(--border-color);">
+                                    <thead style="background: rgba(14, 21, 38, 0.85); border-bottom: 1px solid var(--border-card);">
                                         <tr>
                                             <?php foreach (array_keys($results[0]) as $colName): ?>
-                                                <th style="padding: 9px 14px; font-weight: 600; color: #475569; white-space: nowrap;"><?= htmlspecialchars($colName) ?></th>
+                                                <th style="padding: 10px 14px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em;"><?= htmlspecialchars($colName) ?></th>
                                             <?php endforeach; ?>
                                         </tr>
                                     </thead>
@@ -877,7 +888,7 @@ require_once __DIR__ . '/includes/sidebar.php';
                                         <?php foreach ($results as $row): ?>
                                             <tr>
                                                 <?php foreach ($row as $colKey => $val): ?>
-                                                    <td style="padding: 8px 14px; font-family: monospace; font-size: 0.84rem; color: #334155; white-space: nowrap;">
+                                                    <td style="padding: 9px 14px; font-family: var(--font-mono); font-size: 0.84rem; color: var(--text-primary); white-space: nowrap;">
                                                         <?php 
                                                         $colLower = strtolower((string)$colKey);
                                                         $isMoneyCol = in_array($colLower, ['amount', 'total_spent', 'budget_amount', 'saved_amount', 'remaining', 'monthly_income', 'monthly_expense', 'monthly_net_savings', 'overrun_amount', 'max_expense', 'min_expense', 'total_expense', 'total_amount', 'spent'])
@@ -924,10 +935,13 @@ function filterQueries(category, btn) {
     const buttons = document.querySelectorAll('#filterButtonContainer button');
     buttons.forEach(b => {
         b.classList.remove('btn-primary');
-        b.classList.add('btn-secondary');
+        b.classList.add('btn-outline');
+        b.style.borderColor = 'rgba(255,255,255,0.12)';
+        b.style.color = 'var(--text-secondary)';
     });
-    btn.classList.remove('btn-secondary');
+    btn.classList.remove('btn-outline');
     btn.classList.add('btn-primary');
+    btn.style.color = '#ffffff';
 
     const cards = document.querySelectorAll('.query-card');
     cards.forEach(card => {
@@ -961,7 +975,7 @@ function copySql(btn) {
         const oldText = span.textContent;
         span.textContent = 'Copied!';
         icon.className = 'fa-solid fa-check';
-        btn.style.color = '#34d399';
+        btn.style.color = '#10b981';
         setTimeout(() => {
             span.textContent = oldText;
             icon.className = 'fa-regular fa-copy';
@@ -979,31 +993,34 @@ function copySql(btn) {
     to { opacity: 1; transform: translateY(0); }
 }
 .query-card {
-    background: white;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 22px;
+    background: rgba(14, 21, 38, 0.78);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius-lg);
+    padding: 24px;
     box-shadow: var(--shadow-sm);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 .query-card:hover {
-    box-shadow: var(--shadow-md);
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.5);
 }
 .query-concept-tag {
-    background: #eff6ff;
-    color: #2563eb;
-    border: 1px solid #bfdbfe;
-    padding: 4px 10px;
+    background: rgba(99, 102, 241, 0.15);
+    color: #a5b4fc;
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    padding: 4px 12px;
     border-radius: 9999px;
     font-size: 0.78rem;
     font-weight: 700;
     letter-spacing: 0.02em;
 }
 .sql-code-box {
-    background: #0f172a;
-    border: 1px solid #334155;
+    background: #050811;
+    border: 1px solid rgba(99, 102, 241, 0.25);
     border-radius: var(--radius-sm);
-    padding: 14px 18px;
+    padding: 16px 20px;
     overflow-x: auto;
 }
 </style>
