@@ -13,34 +13,23 @@ $user = current_user();
 $userId = $user['id'];
 $pdo = getDBConnection();
 
-$pageTitle = 'Fintech Command Center';
+$pageTitle = 'SMART EXPENSE TRACKER';
 $currentPage = 'dashboard';
 
 // ----------------------------------------------------------
-// 1. Fetch Top Statistics (Income, Expense, Balance, Savings)
+// 1. Fetch Top Statistics (Income, Expense, Net Balance, Savings)
 // ----------------------------------------------------------
-$stmtLifetime = $pdo->prepare("
-    SELECT 
-        COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) AS total_income,
-        COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) AS total_expense
-    FROM transactions 
-    WHERE user_id = ?
-");
-$stmtLifetime->execute([$userId]);
-$lifetime = $stmtLifetime->fetch();
-$totalIncome = (float)$lifetime['total_income'];
-$totalExpense = (float)$lifetime['total_expense'];
-$balance = $totalIncome - $totalExpense;
+$summary = get_user_financial_summary($pdo, $userId);
+$totalIncome = $summary['total_income'];
+$totalExpense = $summary['total_expense'];
+$totalSavings = $summary['total_savings'];
+$balance = $summary['net_balance']; // Net Balance = Income - Expense - Savings
+$savingsRate = $summary['savings_rate'];
 
-// Total Accumulated Savings
-$stmtSavings = $pdo->prepare("SELECT COALESCE(SUM(saved_amount), 0) FROM savings_goals WHERE user_id = ?");
-$stmtSavings->execute([$userId]);
-$totalSavings = (float)$stmtSavings->fetchColumn();
-
-// Financial Health Score & Savings Rate
-$savingsRate = ($totalIncome > 0) ? max(0, round((($totalIncome - $totalExpense) / $totalIncome) * 100)) : 0;
-$healthScore = min(98, max(25, round(60 + ($balance > 0 ? 24 : -25) + min(14, $savingsRate * 0.35))));
-$healthLabel = ($healthScore >= 80) ? 'Excellent' : (($healthScore >= 60) ? 'Healthy' : 'Needs Caution');
+// Financial Health Score dynamically calculated across actual user data
+$healthData = calculate_financial_health_score($pdo, $userId);
+$healthScore = $healthData['score'];
+$healthLabel = $healthData['label'];
 
 // ----------------------------------------------------------
 // 2. Fetch Middle Section Charts Data (6-Month Curves)

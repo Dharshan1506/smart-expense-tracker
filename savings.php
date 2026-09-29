@@ -43,16 +43,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if (empty($errors)) {
         try {
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare("
                 INSERT INTO savings_goals (user_id, goal_name, target_amount, saved_amount, target_date, created_at)
                 VALUES (?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([$userId, $goalName, $targetAmount, $savedAmount, $targetDate]);
+            $pdo->commit();
 
             set_flash('success', 'Savings goal "' . htmlspecialchars($goalName) . '" created successfully!');
             header('Location: savings.php');
             exit;
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $errors[] = 'Failed to create goal: ' . $e->getMessage();
         }
     }
@@ -74,17 +79,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     if (empty($errors)) {
         try {
+            $pdo->beginTransaction();
             $stmt = $pdo->prepare("
                 UPDATE savings_goals 
                 SET saved_amount = saved_amount + ? 
                 WHERE goal_id = ? AND user_id = ?
             ");
             $stmt->execute([$depositAmount, $goalId, $userId]);
+            $pdo->commit();
 
-            set_flash('success', 'Deposited ' . format_currency($depositAmount) . ' towards your savings milestone!');
+            set_flash('success', 'Deposited ' . format_currency($depositAmount) . ' towards your savings milestone! Net balance updated.');
             header('Location: savings.php');
             exit;
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $errors[] = 'Failed to record contribution: ' . $e->getMessage();
         }
     }
@@ -96,11 +106,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $csrfToken = $_POST['csrf_token'] ?? '';
 
     if (verify_csrf_token($csrfToken) && $goalId > 0) {
-        $stmt = $pdo->prepare("DELETE FROM savings_goals WHERE goal_id = ? AND user_id = ?");
-        $stmt->execute([$goalId, $userId]);
-        set_flash('success', 'Savings goal was removed.');
-        header('Location: savings.php');
-        exit;
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare("DELETE FROM savings_goals WHERE goal_id = ? AND user_id = ?");
+            $stmt->execute([$goalId, $userId]);
+            $pdo->commit();
+            set_flash('success', 'Savings goal was removed.');
+            header('Location: savings.php');
+            exit;
+        } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            set_flash('danger', 'Failed to remove goal: ' . $e->getMessage());
+        }
     }
 }
 

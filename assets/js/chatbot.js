@@ -94,11 +94,17 @@ function getCurrentTimeStr() {
     return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// Client-side conversation history tracking
+window.askMeHistory = window.askMeHistory || [];
+
 // Send Message to Backend AI Endpoint
 async function sendChatMessage(text) {
     const messagesContainer = document.getElementById('askMeMessages');
     const sendBtn = document.getElementById('askMeSendBtn');
     const input = document.getElementById('askMeInput');
+
+    // Push message to local history
+    window.askMeHistory.push({ sender: 'user', text: text });
 
     // Append User Message Bubble
     appendUserBubble(text);
@@ -129,16 +135,22 @@ async function sendChatMessage(text) {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             },
-            body: JSON.stringify({ message: text })
+            body: JSON.stringify({
+                message: text,
+                history: window.askMeHistory
+            })
         });
 
         const data = await response.json();
         removeTypingIndicator(typingId);
 
         if (data && data.success && data.reply) {
+            window.askMeHistory.push({ sender: 'bot', text: data.reply });
             appendBotBubble(data.reply);
         } else {
-            appendBotBubble(data.error || "I could not formulate an answer right now. Please try asking again.");
+            const errReply = data.error || "I could not formulate an answer right now. Please try asking again.";
+            window.askMeHistory.push({ sender: 'bot', text: errReply });
+            appendBotBubble(errReply);
         }
     } catch (err) {
         // Fallback: try relative path if absolute failed
@@ -146,11 +158,15 @@ async function sendChatMessage(text) {
             const fallbackRes = await fetch('api/chatbot_api.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify({
+                    message: text,
+                    history: window.askMeHistory
+                })
             });
             const fbData = await fallbackRes.json();
             removeTypingIndicator(typingId);
             if (fbData && fbData.success && fbData.reply) {
+                window.askMeHistory.push({ sender: 'bot', text: fbData.reply });
                 appendBotBubble(fbData.reply);
             } else {
                 appendBotBubble("Could not process request. Please try again.");

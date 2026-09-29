@@ -85,52 +85,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             $amountVal = (float)$amount;
-            $stmtInsert = $pdo->prepare("
-                INSERT INTO transactions (user_id, category_id, amount, transaction_type, transaction_date, description, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW())
-            ");
-            $stmtInsert->execute([
-                $userId,
-                $categoryId,
-                $amountVal,
-                $type,
-                $transactionDate,
-                $description
-            ]);
 
-            // Budget Threshold Alert Check
+            // Enforce Budget Limit check BEFORE insertion into database
             if ($type === 'expense') {
-                $checkBudgetStmt = $pdo->prepare("
-                    SELECT b.budget_amount, c.category_name, SUM(t.amount) as total_spent
-                    FROM budgets b
-                    INNER JOIN categories c ON b.category_id = c.category_id
-                    INNER JOIN transactions t ON t.category_id = b.category_id AND t.user_id = b.user_id
-                    WHERE b.user_id = ? AND b.category_id = ?
-                      AND ? BETWEEN b.start_date AND b.end_date
-                      AND t.transaction_type = 'expense'
-                      AND t.transaction_date BETWEEN b.start_date AND b.end_date
-                    GROUP BY b.budget_id, b.budget_amount, c.category_name
-                ");
-                $checkBudgetStmt->execute([$userId, $categoryId, $transactionDate]);
-                $budgetRow = $checkBudgetStmt->fetch();
-
-                if ($budgetRow && (float)$budgetRow['total_spent'] > (float)$budgetRow['budget_amount']) {
-                    $excess = (float)$budgetRow['total_spent'] - (float)$budgetRow['budget_amount'];
-                    $alertStmt = $pdo->prepare("
-                        INSERT INTO alerts (user_id, message, alert_type, created_at) 
-                        VALUES (?, ?, 'danger', NOW())
-                    ");
-                    $alertStmt->execute([
-                        $userId,
-                        'Budget Alert: Your spending for ' . $budgetRow['category_name'] . ' has exceeded your budget by ' . format_currency($excess) . '!'
-                    ]);
+                $budgetCheck = validate_expense_against_budget($pdo, $userId, $categoryId, $amountVal, $transactionDate);
+                if (!empty($budgetCheck['blocked'])) {
+                    $errors[] = nl2br(htmlspecialchars($budgetCheck['message']));
                 }
             }
 
-            set_flash('success', 'Transaction of ' . format_currency($amountVal) . ' recorded successfully!');
-            header('Location: transactions.php');
-            exit;
+            if (empty($errors)) {
+                $pdo->beginTransaction();
+
+                $stmtInsert = $pdo->prepare("
+                    INSERT INTO transactions (user_id, category_id, amount, transaction_type, transaction_date, description, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, NOW())
+                ");
+                $stmtInsert->execute([
+                    $userId,
+                    $categoryId,
+                    $amountVal,
+                    $type,
+                    $transactionDate,
+                    $description
+                ]);
+
+                // Record warning alert if near budget threshold
+                if ($type === 'expense' && isset($budgetCheck) && !empty($budgetCheck['warning'])) {
+                    $alertStmt = $pdo->prepare("
+                        INSERT INTO alerts (user_id, message, alert_type, created_at) 
+                        VALUES (?, ?, 'warning', NOW())
+                    ");
+                    $alertStmt->execute([$userId, strip_tags($budgetCheck['warning'])]);
+                    set_flash('warning', 'Transaction recorded. ' . $budgetCheck['warning']);
+                } else {
+                    set_flash('success', 'Transaction of ' . format_currency($amountVal) . ' recorded successfully!');
+                }
+
+                $pdo->commit();
+                header('Location: transactions.php');
+                exit;
+            }
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $errors[] = 'Failed to record transaction: ' . $e->getMessage();
         }
     }
@@ -161,7 +160,7 @@ require_once __DIR__ . '/includes/sidebar.php';
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     <div>
                         <?php foreach ($errors as $err): ?>
-                            <div><?= htmlspecialchars($err) ?></div>
+                            <div style="white-space: pre-line; line-height: 1.6; margin-bottom: 6px;"><?= $err ?></div>
                         <?php endforeach; ?>
                     </div>
                 </div>

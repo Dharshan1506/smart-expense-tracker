@@ -47,12 +47,12 @@
         <!-- Optional Quick Topic Pills (shortcuts) -->
         <div class="askme-faq-strip">
             <div class="askme-faq-pills">
-                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('How is my balance calculated?')">Balance Formula</button>
-                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('How do I add an expense?')">Add Expense</button>
-                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('Where are my expenses stored?')">Database Storage</button>
-                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('What is a foreign key?')">Foreign Keys</button>
-                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('How does XAMPP work?')">XAMPP Stack</button>
-                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('What does the analytics page show?')">Analytics Overview</button>
+                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('How much did I spend this month?')">Monthly Spending</button>
+                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('How much did I spend on Food?')">Food Expenses</button>
+                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('What is my balance?')">Available Balance</button>
+                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('How much is left in my Food budget?')">Food Budget</button>
+                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('What is my financial health score?')">Health Score</button>
+                <button type="button" class="askme-faq-pill" onclick="sendQuickQuestion('How do I add an expense?')">Add Expense Guide</button>
             </div>
         </div>
 
@@ -66,7 +66,7 @@
                 <div>
                     <div class="askme-msg-bubble">
                         Hello! 👋 I am <strong>Ask Me Help</strong>, your ExpenseIQ AI Assistant.<br><br>
-                        Ask me anything about your balance, recording expenses, setting up budgets, or exploring MySQL and DBMS queries!
+                        Ask me anything about your balance, expenses, budgets, savings goals, or financial health!
                     </div>
                     <div class="askme-msg-time" id="greetingTime">Just now</div>
                 </div>

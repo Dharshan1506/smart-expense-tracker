@@ -92,25 +92,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         try {
             $amountVal = (float)$amount;
-            $stmtUpdate = $pdo->prepare("
-                UPDATE transactions 
-                SET amount = ?, transaction_type = ?, category_id = ?, transaction_date = ?, description = ?
-                WHERE transaction_id = ? AND user_id = ?
-            ");
-            $stmtUpdate->execute([
-                $amountVal,
-                $type,
-                $categoryId,
-                $transactionDate,
-                $description,
-                $transactionId,
-                $userId
-            ]);
 
-            set_flash('success', 'Transaction #' . $transactionId . ' was updated successfully!');
-            header('Location: transactions.php');
-            exit;
+            // Enforce Budget Limit check BEFORE update in database
+            if ($type === 'expense') {
+                $budgetCheck = validate_expense_against_budget($pdo, $userId, $categoryId, $amountVal, $transactionDate, $transactionId);
+                if (!empty($budgetCheck['blocked'])) {
+                    $errors[] = nl2br(htmlspecialchars($budgetCheck['message']));
+                }
+            }
+
+            if (empty($errors)) {
+                $pdo->beginTransaction();
+
+                $stmtUpdate = $pdo->prepare("
+                    UPDATE transactions 
+                    SET amount = ?, transaction_type = ?, category_id = ?, transaction_date = ?, description = ?
+                    WHERE transaction_id = ? AND user_id = ?
+                ");
+                $stmtUpdate->execute([
+                    $amountVal,
+                    $type,
+                    $categoryId,
+                    $transactionDate,
+                    $description,
+                    $transactionId,
+                    $userId
+                ]);
+
+                if ($type === 'expense' && isset($budgetCheck) && !empty($budgetCheck['warning'])) {
+                    set_flash('warning', 'Transaction updated. ' . $budgetCheck['warning']);
+                } else {
+                    set_flash('success', 'Transaction #' . $transactionId . ' was updated successfully!');
+                }
+
+                $pdo->commit();
+                header('Location: transactions.php');
+                exit;
+            }
         } catch (Exception $e) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $errors[] = 'Failed to update transaction: ' . $e->getMessage();
         }
     }
@@ -141,7 +163,7 @@ require_once __DIR__ . '/includes/sidebar.php';
                     <i class="fa-solid fa-triangle-exclamation"></i>
                     <div>
                         <?php foreach ($errors as $err): ?>
-                            <div><?= htmlspecialchars($err) ?></div>
+                            <div style="white-space: pre-line; line-height: 1.6; margin-bottom: 6px;"><?= $err ?></div>
                         <?php endforeach; ?>
                     </div>
                 </div>

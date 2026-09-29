@@ -18,7 +18,7 @@ $user = current_user();
         <div>
             <div class="sidebar-brand-title">ExpenseIQ</div>
         </div>
-        <span class="sidebar-brand-badge">SaaS 3NF</span>
+        
     </div>
 
     <ul class="sidebar-menu">

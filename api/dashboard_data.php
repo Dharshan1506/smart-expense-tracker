@@ -20,19 +20,9 @@ $userId = $user['id'];
 $pdo = getDBConnection();
 
 try {
-    // 1. Totals
-    $stmtTotals = $pdo->prepare("
-        SELECT 
-            COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) AS total_income,
-            COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) AS total_expense
-        FROM transactions 
-        WHERE user_id = ?
-    ");
-    $stmtTotals->execute([$userId]);
-    $totals = $stmtTotals->fetch();
-    $totalIncome = (float)$totals['total_income'];
-    $totalExpense = (float)$totals['total_expense'];
-    $balance = $totalIncome - $totalExpense;
+    // 1. Financial Summary (Income, Expense, Savings, Net Balance)
+    $summary = get_user_financial_summary($pdo, $userId);
+    $healthData = calculate_financial_health_score($pdo, $userId);
 
     // 2. Monthly Expenses
     $stmtMonth = $pdo->prepare("
@@ -61,11 +51,16 @@ try {
     echo json_encode([
         'status' => 'success',
         'data' => [
-            'total_income' => $totalIncome,
-            'total_expense' => $totalExpense,
-            'current_balance' => $balance,
-            'month_expense' => $monthExpense,
-            'categories' => $categories
+            'total_income'    => $summary['total_income'],
+            'total_expense'   => $summary['total_expense'],
+            'total_savings'   => $summary['total_savings'],
+            'current_balance' => $summary['net_balance'],
+            'net_balance'     => $summary['net_balance'],
+            'savings_rate'    => $summary['savings_rate'],
+            'health_score'    => $healthData['score'],
+            'health_label'    => $healthData['label'],
+            'month_expense'   => $monthExpense,
+            'categories'      => $categories
         ]
     ]);
 } catch (Exception $e) {

@@ -318,3 +318,256 @@ function get_smart_insights(PDO $pdo, int $userId): array {
 
     return $insights;
 }
+
+/**
+ * Get aggregated financial summary for the currently logged-in user
+ * Enforces correct Net Balance formula: Net Balance = Total Income - Total Expenses - Total Savings
+ */
+function get_user_financial_summary(PDO $pdo, int $userId): array {
+    // 1. Total Income & Expenses
+    $stmt = $pdo->prepare("
+        SELECT 
+            COALESCE(SUM(CASE WHEN transaction_type = 'income' THEN amount ELSE 0 END), 0) AS total_income,
+            COALESCE(SUM(CASE WHEN transaction_type = 'expense' THEN amount ELSE 0 END), 0) AS total_expense
+        FROM transactions 
+        WHERE user_id = ?
+    ");
+    $stmt->execute([$userId]);
+    $totals = $stmt->fetch();
+
+    $totalIncome = (float)($totals['total_income'] ?? 0);
+    $totalExpense = (float)($totals['total_expense'] ?? 0);
+
+    // 2. Total Savings (Accumulated in Savings Goals)
+    $stmtSavings = $pdo->prepare("SELECT COALESCE(SUM(saved_amount), 0) FROM savings_goals WHERE user_id = ?");
+    $stmtSavings->execute([$userId]);
+    $totalSavings = (float)($stmtSavings->fetchColumn() ?: 0.0);
+
+    // 3. Net Balance = Income - Expense - Savings
+    $netBalance = $totalIncome - $totalExpense - $totalSavings;
+
+    // 4. Savings Rate
+    $savingsRate = ($totalIncome > 0) ? max(0, round((($totalIncome - $totalExpense) / $totalIncome) * 100, 2)) : 0.0;
+
+    return [
+        'total_income'  => $totalIncome,
+        'total_expense' => $totalExpense,
+        'total_savings' => $totalSavings,
+        'net_balance'   => $netBalance,
+        'savings_rate'  => $savingsRate
+    ];
+}
+
+/**
+ * Dynamically calculate the Financial Health Score (0-100) based on actual database data
+ * Transparent rule-based system across 5 weighted factors:
+ * 1. Savings Rate (Max 30 pts)
+ * 2. Expense-to-Income Ratio (Max 25 pts)
+ * 3. Budget Utilization & Overruns (Max 20 pts)
+ * 4. Net Balance Liquidity (Max 15 pts)
+ * 5. Savings Goal Progress (Max 10 pts)
+ */
+function calculate_financial_health_score(PDO $pdo, int $userId): array {
+    $summary = get_user_financial_summary($pdo, $userId);
+    $income = $summary['total_income'];
+    $expense = $summary['total_expense'];
+    $savings = $summary['total_savings'];
+    $netBalance = $summary['net_balance'];
+    $savingsRate = $summary['savings_rate'];
+
+    // Factor 1: Savings Rate (Max 30 pts)
+    $savingsRatePts = 0;
+    if ($savingsRate >= 30) $savingsRatePts = 30;
+    elseif ($savingsRate >= 20) $savingsRatePts = 25;
+    elseif ($savingsRate >= 10) $savingsRatePts = 18;
+    elseif ($savingsRate > 0) $savingsRatePts = 10;
+    else $savingsRatePts = 0;
+
+    // Factor 2: Expense-to-Income Ratio (Max 25 pts)
+    $expRatio = ($income > 0) ? ($expense / $income) * 100 : 100;
+    $expRatioPts = 0;
+    if ($income > 0) {
+        if ($expRatio <= 50) $expRatioPts = 25;
+        elseif ($expRatio <= 70) $expRatioPts = 20;
+        elseif ($expRatio <= 85) $expRatioPts = 15;
+        elseif ($expRatio <= 100) $expRatioPts = 5;
+        else $expRatioPts = 0;
+    } else {
+        $expRatioPts = ($expense == 0) ? 15 : 0;
+    }
+
+    // Factor 3: Budget Utilization (Max 20 pts)
+    $stmtBudgets = $pdo->prepare("
+        SELECT b.budget_amount, COALESCE(SUM(t.amount), 0) as total_spent
+        FROM budgets b
+        LEFT JOIN transactions t ON t.category_id = b.category_id 
+            AND t.user_id = b.user_id 
+            AND t.transaction_type = 'expense'
+            AND t.transaction_date BETWEEN b.start_date AND b.end_date
+        WHERE b.user_id = ? AND CURRENT_DATE() BETWEEN b.start_date AND b.end_date
+        GROUP BY b.budget_id, b.budget_amount
+    ");
+    $stmtBudgets->execute([$userId]);
+    $userBudgets = $stmtBudgets->fetchAll();
+
+    $budgetPts = 15; // default neutral if no active budgets
+    if (!empty($userBudgets)) {
+        $overBudgetCount = 0;
+        $totalPctSum = 0;
+        foreach ($userBudgets as $b) {
+            $limit = (float)$b['budget_amount'];
+            $spent = (float)$b['total_spent'];
+            $pct = ($limit > 0) ? ($spent / $limit) * 100 : 0;
+            $totalPctSum += $pct;
+            if ($pct > 100) $overBudgetCount++;
+        }
+        $avgPct = $totalPctSum / count($userBudgets);
+        if ($overBudgetCount == 0 && $avgPct <= 80) $budgetPts = 20;
+        elseif ($overBudgetCount == 0 && $avgPct <= 95) $budgetPts = 16;
+        elseif ($overBudgetCount == 0 && $avgPct <= 100) $budgetPts = 12;
+        else $budgetPts = max(0, 10 - ($overBudgetCount * 5));
+    }
+
+    // Factor 4: Net Balance Liquidity (Max 15 pts)
+    $liquidityPts = 0;
+    if ($netBalance > 0) $liquidityPts = 15;
+    elseif ($netBalance == 0) $liquidityPts = 5;
+    else $liquidityPts = 0;
+
+    // Factor 5: Savings Goal Progress (Max 10 pts)
+    $stmtGoals = $pdo->prepare("SELECT target_amount, saved_amount FROM savings_goals WHERE user_id = ?");
+    $stmtGoals->execute([$userId]);
+    $goals = $stmtGoals->fetchAll();
+
+    $goalPts = 5; // default if no active goals
+    if (!empty($goals)) {
+        $goalPctSum = 0;
+        foreach ($goals as $g) {
+            $target = (float)$g['target_amount'];
+            $saved = (float)$g['saved_amount'];
+            $pct = ($target > 0) ? min(100, ($saved / $target) * 100) : 0;
+            $goalPctSum += $pct;
+        }
+        $avgGoalPct = $goalPctSum / count($goals);
+        $goalPts = min(10, (int)round($avgGoalPct / 10));
+    }
+
+    $rawScore = $savingsRatePts + $expRatioPts + $budgetPts + $liquidityPts + $goalPts;
+    $finalScore = max(0, min(100, (int)round($rawScore)));
+
+    // Determine Interpretation Label
+    if ($finalScore >= 80) $label = 'Excellent';
+    elseif ($finalScore >= 60) $label = 'Good';
+    elseif ($finalScore >= 40) $label = 'Moderate';
+    elseif ($finalScore >= 20) $label = 'Needs Attention';
+    else $label = 'Critical';
+
+    return [
+        'score'          => $finalScore,
+        'label'          => $label,
+        'savings_rate'   => $savingsRate,
+        'expense_ratio'  => round($expRatio, 1),
+        'net_balance'    => $netBalance,
+        'total_income'   => $income,
+        'total_expenses' => $expense,
+        'total_savings'  => $savings
+    ];
+}
+
+/**
+ * Server-side budget validation function
+ * Prevents transaction insertion/update if adding the expense would exceed the user's category budget
+ */
+function validate_expense_against_budget(
+    PDO $pdo,
+    int $userId,
+    int $categoryId,
+    float $newAmount,
+    string $transactionDate,
+    ?int $excludeTransactionId = null
+): array {
+    // 1. Fetch active budget for user, category and date
+    $stmt = $pdo->prepare("
+        SELECT b.budget_id, b.budget_amount, b.start_date, b.end_date, c.category_name
+        FROM budgets b
+        INNER JOIN categories c ON b.category_id = c.category_id
+        WHERE b.user_id = ? AND b.category_id = ?
+          AND ? BETWEEN b.start_date AND b.end_date
+        LIMIT 1
+    ");
+    $stmt->execute([$userId, $categoryId, $transactionDate]);
+    $budget = $stmt->fetch();
+
+    if (!$budget) {
+        // No budget configured for this category and timeframe
+        return ['blocked' => false];
+    }
+
+    $budgetAmount = (float)$budget['budget_amount'];
+    $categoryName = (string)$budget['category_name'];
+    $startDate = (string)$budget['start_date'];
+    $endDate = (string)$budget['end_date'];
+
+    // 2. Calculate current total spent in this category for the budget period
+    $querySpent = "
+        SELECT COALESCE(SUM(amount), 0) as total_spent
+        FROM transactions
+        WHERE user_id = ? AND category_id = ? AND transaction_type = 'expense'
+          AND transaction_date BETWEEN ? AND ?
+    ";
+    $params = [$userId, $categoryId, $startDate, $endDate];
+
+    if ($excludeTransactionId !== null && $excludeTransactionId > 0) {
+        $querySpent .= " AND transaction_id != ?";
+        $params[] = $excludeTransactionId;
+    }
+
+    $stmtSpent = $pdo->prepare($querySpent);
+    $stmtSpent->execute($params);
+    $alreadySpent = (float)($stmtSpent->fetchColumn() ?: 0.0);
+
+    $remaining = $budgetAmount - $alreadySpent;
+    $newTotal = $alreadySpent + $newAmount;
+
+    // 3. Check if new total exceeds budget limit
+    if ($newTotal > $budgetAmount) {
+        $maxSpend = max(0, $remaining);
+        $blockMessage = "⚠️ Expense Blocked\n"
+            . "Your " . $categoryName . " budget is " . format_currency($budgetAmount) . ".\n"
+            . "You have already spent " . format_currency($alreadySpent) . ".\n"
+            . "You can spend only " . format_currency($maxSpend) . " more.\n"
+            . "This " . format_currency($newAmount) . " expense cannot be added because it exceeds your budget.";
+
+        return [
+            'blocked'          => true,
+            'message'          => $blockMessage,
+            'category_name'    => $categoryName,
+            'budget_amount'    => $budgetAmount,
+            'already_spent'    => $alreadySpent,
+            'remaining'        => $maxSpend,
+            'attempted_amount' => $newAmount
+        ];
+    }
+
+    // 4. Budget not exceeded, check for warning thresholds
+    $pct = ($budgetAmount > 0) ? round(($newTotal / $budgetAmount) * 100) : 0;
+    $remAfter = max(0, $budgetAmount - $newTotal);
+    $warningMsg = null;
+
+    if ($newTotal == $budgetAmount) {
+        $warningMsg = "🚨 " . $categoryName . " budget fully used.";
+    } elseif ($pct >= 80) {
+        $warningMsg = "⚠️ You have used " . $pct . "% of your " . $categoryName . " budget. Only " . format_currency($remAfter) . " remaining.";
+    }
+
+    return [
+        'blocked'       => false,
+        'warning'       => $warningMsg,
+        'category_name' => $categoryName,
+        'budget_amount' => $budgetAmount,
+        'already_spent' => $alreadySpent,
+        'new_total'     => $newTotal,
+        'utilization'   => $pct
+    ];
+}
+

@@ -226,7 +226,7 @@ $pageTitle = 'ExpenseIQ - Intelligent Financial Management & Analytics';
         <div class="hero-glow-2"></div>
 
         <div class="hero-badge">
-            <i class="fa-solid fa-graduation-cap" style="color: #60a5fa;"></i> Academic DBMS Project &bull; PHP 8 + MySQL + 3NF
+            <i class="fa-solid fa-graduation-cap" style="color: #60a5fa;"></i>Smart Expense Tracker 
         </div>
 
         <h1 class="hero-title">
@@ -234,7 +234,7 @@ $pageTitle = 'ExpenseIQ - Intelligent Financial Management & Analytics';
         </h1>
 
         <p class="hero-subtitle">
-            Take total command of your finances with real-time Indian Rupee (₹) telemetry, automated budget threshold alerts, and 20 live relational DBMS query demonstrations.
+            Track, analyze, and optimize your finances with ease.Smart Expense Tracker helps you take control of your spending and achieve your financial goals.
         </p>
 
         <div class="hero-actions">
@@ -245,7 +245,7 @@ $pageTitle = 'ExpenseIQ - Intelligent Financial Management & Analytics';
                 <i class="fa-solid fa-user-plus"></i> Create Free Account
             </a>
             <a href="queries.php" class="btn btn-hero-outline" style="border-color: rgba(6, 182, 212, 0.4); color: #38bdf8;">
-                <i class="fa-solid fa-database"></i> Explore 20 SQL Queries
+                <i class="fa-solid fa-database"></i> Explore SQL Queries
             </a>
         </div>
 

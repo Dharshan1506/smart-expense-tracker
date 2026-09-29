@@ -6,7 +6,7 @@
 
 declare(strict_types=1);
 
-define('DB_HOST', 'localhost');
+define('DB_HOST', '127.0.0.1');
 define('DB_PORT', '3306');
 define('DB_NAME', 'expense_tracker');
 define('DB_USER', 'root');
